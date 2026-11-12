@@ -14,7 +14,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>#trayWrap{padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}</style>
-<script>window.LETO_SITE={v:'197f1cf37600',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
+<script>window.LETO_SITE={v:'8c24aaf90623',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1113,7 +1113,7 @@ const headOf = f => f.m.find(m => m.k === 'h') || f.m[0];
 function craftUnlocked(c){ return c === 'none' || CRAFTS[c].types.some(t => unlocked(t)); }
 function relLabel(m){ const f = m.s === 'f';
   switch (m.k){ case 'h': return 'глава семьи'; case 's': return f ? 'жена' : 'муж'; case 'c': return f ? 'дочь' : 'сын'; case 'b': return f ? 'сестра' : 'брат';
-    case 'p': return f ? 'мать' : 'отец'; case 'g': return f ? 'бабушка' : 'дедушка'; } return f ? 'родственница' : 'родственник'; }
+    case 'p': return f ? 'мать' : 'отец'; case 'g': return f ? 'бабушка' : 'дедушка'; case 'gg': return f ? 'прабабушка' : 'прадедушка'; } return f ? 'родственница' : 'родственник'; }
 function craftName(m){ const C = CRAFTS[m.c || 'none']; return m.s === 'f' ? C.f : C.m; }
 function famRole(m){ const F = FAMOUS[m.fm]; return F.name ? F.name(m) : (m.s === 'f' ? F.f : F.m); }
 function assignErr(m, t){
@@ -1142,11 +1142,15 @@ function newFamily(craft){
   if (Math.random() < .15){ const s = Math.random() < .6 ? 'f' : 'm'; f.m.push({ id:uid++, n: s === 'm' ? praen(f) + ' ' + NOM[nm] : rpick(FNAMES) + ' ' + nomF(otherNom(nm)), s, a: OLD + Math.random()*600*LIFE_K, k:'p' }); }
   return f;
 }
-// the Chuprovs: dad Евгений and his son Степан, and their fluffy Василиса (white, a rainbow collar, the mushroom-picker's talent), who never leaves them
-// the son's version: папа and сын, no wife — nw keeps Евгений from a wedding at home (it rides along in saves and flights)
+// the Chuprovs: dad Евгений and his son Степан, grandpa Александр and great-grandpa Валентин, and their fluffy Василиса
+// (white, a rainbow collar, the mushroom-picker's talent), who never leaves them.
+// The son's version: no wife — nw keeps Евгений from a wedding at home; ka keeps one's age as it is, so Степан never grows up and the elders
+// never grow older or pass away; ot is one's patronymic, kept apart so that renaming never changes it (all of it rides along in saves and flights)
+const CHUP_ELDERS = [['Александр', 'Валентинович', 'm', 'g', 2600], ['Валентин', 'Степанович', 'm', 'gg', 3300]];
+function chupElders(sur){ return CHUP_ELDERS.map(([n, ot, s, k, a]) => ({ id:uid++, n:n + ' ' + ot + ' ' + (s === 'f' ? surF(sur) : sur), s, a:a*LIFE_K, k, ot, ka:1 })); }
 function chuprovs(craft){
   const f = newFamily(craft); f.nm = CHUP;
-  f.m = [{ id:uid++, n:'Евгений Чупров', s:'m', a:600*LIFE_K, k:'h', c:craft, nw:1 }, { id:uid++, n:'Степан Чупров', s:'m', a:100*LIFE_K, k:'c' }];
+  f.m = [{ id:uid++, n:'Евгений Александрович Чупров', s:'m', a:600*LIFE_K, k:'h', c:craft, nw:1, ot:'Александрович', ka:1 }, { id:uid++, n:'Степан Евгеньевич Чупров', s:'m', a:100*LIFE_K, k:'c', ka:1, ot:'Евгеньевич' }, ...chupElders('Чупров')];
   return f;
 }
 const VAS_K = 3, vasPet = () => ({ k:VAS_K, n:'Василиса', tr:0, w:1 }), isVas = p => !!(p && p.w);
@@ -1301,7 +1305,16 @@ function turnMap(M, [o, n]){
 let mapMemo = null;
 const MAP = () => { const id = COL().id, k = id + wv; if (!mapMemo || mapMemo.k !== k) mapMemo = { k, M: turnMap(MAPS[id], wv) }; return mapMemo.M; };
 // a new game on a colony lays its planet down another way, never with the same turn twice running
-function pickWorld(){ let o; do o = (Math.random()*8) | 0; while (o === wv[0]); return [o, 1 + ((Math.random()*9998) | 0)]; }
+// the son's version: the first colony lands only where the Chuprovs' home can stand in the upper quarter of a crossroads, one tile left of the crossing,
+// to the right of the road that runs up-left from it, the door onto that road (see drawChupHouse), and the well's water still reaches it
+function pickWorld(){
+  const any = () => { let o; do o = (Math.random()*8) | 0; while (o === wv[0]); return [o, 1 + ((Math.random()*9998) | 0)]; };
+  if (!(colIdx === 0 && NARROW_START)) return any();
+  const ok = []; for (let o = 0; o < 8; o++) for (let c = 0; c < 10; c++) if (chupRoadOK([o, c + 10])) ok.push([o, c]);   // the noise's last digit picks the camp
+  const P = ok.filter(p => p[0] !== wv[0]), [o, c] = P.length ? rpick(P) : ok.length ? rpick(ok) : [-1, 0];
+  return o < 0 ? any() : [o, c + 10*(1 + ((Math.random()*998) | 0))]; }
+function chupRoadOK(w){ const keep = wv; wv = w; mapMemo = null; const T = campBase(); wv = keep; mapMemo = null;
+  const h = T.find(t => t[2] === 'house' && t[3]); return !!h && !!chupSpot(T, h); }
 // the landing camp around the dome centre: roads, two capsules, a plot, a well on bubbles and a bioreactor; it turns with the map.
 // Ten layouts: the world variant's noise picks one ([0, 0] keeps the first, the camp as drawn). Roads: ['h', y, x0, x1] or ['v', x, y0, y1];
 // every building touches a road, the centre tile is always road, everything stays within 3 tiles of the centre,
@@ -1326,8 +1339,17 @@ function campRaw(){
   for (const [dx, dy, t, l] of C.b) at(dx, dy, t, l);   // a building takes its tile even if a road was drawn through it
   return [...m.values()];
 }
-const campTiles = () => { const M = MAP(), [cx, cy] = M.dome, T = M.off || ((dx, dy) => [dx, dy]);
+const campBase = () => { const M = MAP(), [cx, cy] = M.dome, T = M.off || ((dx, dy) => [dx, dy]);
   return campRaw().map(([dx, dy, ...r]) => { const [a, b] = T(dx, dy); return [cx + a, cy + b, ...r]; }); };
+// the son's version: in the first colony the Chuprovs' home stands in the upper quarter of a crossroads, one tile left of the crossing
+// (the tile beside the road that runs up-left from it, the door onto that road), and still within the well's reach (see pickWorld)
+const campTiles = () => { const T = campBase(); if (colIdx === 0 && NARROW_START){ const h = T.find(t => t[2] === 'house' && t[3]), m = h && chupSpot(T, h); if (m){ h[0] = m[0]; h[1] = m[1]; } } return T; };
+function chupSpot(T, h){
+  const rd = (x, y) => T.some(t => t[2] === 'road' && t[0] === x && t[1] === y), c = [h[0] + 1, h[1] + 1], m = [h[0] - 1, h[1]], w = T.find(t => t[2] === 'well');
+  if (!(rd(...c) && rd(c[0] - 1, c[1]) && rd(c[0], c[1] - 1) && rd(c[0] + 1, c[1]) && rd(c[0], c[1] + 1))) return null;   // a crossroads just below the house
+  if (T.some(t => t[0] === m[0] && t[1] === m[1]) || !rd(m[0], m[1] + 1) || !w || Math.max(Math.abs(w[0] - m[0]), Math.abs(w[1] - m[1])) > 2) return null;
+  return m;
+}
 // bubbles under the camp well and on two free tiles beside it, so the first well is full and a second one has a place to go
 function campBubbles(){
   const raw = campRaw(), taken = new Set(raw.map(p => p[0] + ',' + p[1])), w = raw.find(p => p[2] === 'well'); if (!w) return [];
@@ -1439,7 +1461,7 @@ function newGame(w){
   air = airBalance(stats().pop); domeProg = domeShare();
   chronicle(narrow ? `Первыми ${COL().where} высадились разведчики ${famPl(B[famHouses()[0]].f)}. Остальные семьи ждут на орбитальном корабле.`
     : `Колония высадилась ${COL().where} на площадке, которую подготовили разведчики: ${famHouses().map(i => famPl(B[i].f)).join(' и ')}. Ещё одна семья на подлёте.`);
-  if (ch !== undefined) chronicle('Чупровых двое: папа Евгений и сын Степан. С ними прилетела Василиса, их белый пухляк в радужном ошейнике. Её талант: грибник.');
+  if (ch !== undefined) chronicle('Чупровых четверо: папа Евгений Александрович, сын Степан Евгеньевич, дедушка Александр Валентинович и прадедушка Валентин Степанович. С ними прилетела Василиса, их белый пухляк в радужном ошейнике. Её талант: грибник.');
   centerCam(DOME_C[0], DOME_C[1]);
 }
 
@@ -2458,7 +2480,7 @@ function familyTick(){
   let wed = false;
   for (const i of famHouses()){
     const f = B[i].f, sch = R.school[i];
-    for (const m of f.m){ const kid = m.a < ADULT; m.a += kid && sch ? 2 : 1; if (kid && m.a >= ADULT) growUp(m, f, i); }
+    for (const m of f.m){ if (m.ka) continue; const kid = m.a < ADULT; m.a += kid && sch ? 2 : 1; if (kid && m.a >= ADULT) growUp(m, f, i); }
     for (const m of f.m.slice()) if (m.a > PASS && !m.fm && Math.random() < 1/(600*LIFE_K)) passAway(m, f);
     const h = headOf(f), sp = f.m.find(m => m.k === 's');
     if (h && sp && stage(h) === 1 && stage(sp) === 1){ if (f.m.length < FAM_MAX && Math.random() < (f.tr.includes('fertile') ? 2 : 1)*(B[i].pet ? 1.5 : 1)/BIRTH_T) birth(f); }
@@ -4567,6 +4589,42 @@ function drawHouse(lvl, cx, cy){
   poly(dia(cx+15, cy+9, .22), '#7fbfe0', '#e3d9c7', 1.5);
   ell(cx-6, cy+13, 3.4, 2.2, '#f6e3a8'); ell(cx+9, cy+14, 2.8, 2, '#f2b6c6');
 }
+// the son's version: the Chuprovs' home is a red two-storey box (variant В1): a cream rim on the flat roof, blue windows on both floors and,
+// below, a double glass door with a gap between the leaves and a gold handle on each, under a cream canopy. The door faces the road:
+// on the left face when the road runs there (the camp puts it so), on the right face when the only road beside the house is on that side
+const CH_RED = ['#d9544a', '#b03f3a', '#8f3434'], CH_RIM = ['#efddc4', '#cdb79c'], CH_GL = ['#8fd0ee', '#5aa6d6', '#dff3fb'], CH_DOOR = '#6fbde8', CH_FRAME = '#3f7fb3', CH_GAP = '#2f5f8f';
+const CH_F = .5, CH_H = 32, CH_TOP = -(CH_H + TH/4 + 2);   // the roof's top above the tile's middle, for the wish bubble
+function chupDoorRight(i){ const x = i % N, y = (i / N) | 0, rd = j => B[j] && B[j].t === 'road';
+  return !(y < N - 1 && rd(i + N)) && x < N - 1 && rd(i + 1); }
+function drawChupHouse(cx, cy, i){
+  const f = CH_F, h = CH_H, hw = TW/2*f, hh = TH/2*f, fl = h/2, ink0 = INK, R = i >= 0 && chupDoorRight(i);
+  // a face by its side: the door's face and the other one; a runs from the house's outer corner to its front corner on either
+  const face = (door, a0, a1, h0, h1, col) => (door !== R) ? lface(cx, cy, f, a0, a1, h0, h1, col) : rface(cx, cy, f, 1 - a1, 1 - a0, h0, h1, col);
+  poly([cx-hw,cy, cx,cy+hh, cx,cy+hh-h, cx-hw,cy-h], CH_RED[0]);
+  poly([cx,cy+hh, cx+hw,cy, cx+hw,cy-h, cx,cy+hh-h], CH_RED[1]);
+  poly([cx,cy-hh-h, cx+hw,cy-h, cx,cy+hh-h, cx-hw,cy-h], CH_RED[2]);
+  INK = null; const r = 1.6;
+  poly([cx-hw,cy-h, cx,cy+hh-h, cx,cy+hh-h-r, cx-hw,cy-h-r], CH_RIM[0]); poly([cx,cy+hh-h, cx+hw,cy-h, cx+hw,cy-h-r, cx,cy+hh-h-r], CH_RIM[1]);
+  poly([cx,cy-hh-h-r, cx+hw,cy-h-r, cx,cy+hh-h-r, cx-hw,cy-h-r], CH_RIM[0]); poly(dia(cx, cy-h-r, f*.8), CH_RED[2]);
+  // a window: blue glass with a glint; in the evening it glows warm while somebody is at home
+  const win = (door, a0, a1, h0, h1) => { const left = (door !== R);
+    face(door, a0, a1, h0, h1, left ? CH_GL[0] : CH_GL[1]); face(door, a0, a0 + (a1 - a0)*.4, h0 + (h1 - h0)*.45, h1 - .5, CH_GL[2]);
+    if (litK > .01){ const a = ctx.globalAlpha; ctx.globalAlpha = a*litK; face(door, a0, a1, h0, h1, '#ffd98a'); ctx.globalAlpha = a;
+      const am = (a0 + a1)/2, ax = left ? am : 1 - am, x = left ? cx - hw + hw*ax : cx + hw*ax, y = (left ? cy + hh*ax : cy + hh - hh*ax) - (h0 + h1)/2; glowQ.push([x, y, 8, litK]); } };
+  const top = [fl + 3, h - 3.5], low = [4.5, fl - 3];
+  for (const [a0, a1] of [[.14, .38], [.62, .86]]){ win(true, a0, a1, top[0], top[1]); win(false, a0, a1, top[0], top[1]); win(false, a0, a1, low[0], low[1]); }
+  // the double door
+  const dh = fl - 1.5, a0 = .4, a1 = .92, am = (a0 + a1)/2, g = .022;
+  face(true, a0 - .04, a1 + .04, 0, dh + 1.1, CH_FRAME);
+  for (const [b0, b1] of [[a0, am - g], [am + g, a1]]){ face(true, b0, b1, 0, dh, CH_DOOR); face(true, b0 + .03, b0 + (b1 - b0)*.38, dh*.4, dh - .9, CH_GL[2]); }
+  face(true, am - g, am + g, 0, dh, CH_GAP);
+  for (const s of [-1, 1]) face(true, am + s*.055 - .012, am + s*.055 + .012, dh*.38, dh*.58, '#f3c75b');
+  if (litK > .01){ const a = ctx.globalAlpha; ctx.globalAlpha = a*litK*.8; face(true, a0, a1, 0, dh, '#ffcf7e'); ctx.globalAlpha = a; }
+  // the canopy over the door, standing out from the wall
+  { const c0 = .32, c1 = 1, t = dh + 1.1, P = a => R ? [cx + hw*(1 - a), cy + hh - hh*(1 - a)] : [cx - hw + hw*a, cy + hh*a], [x0, y0] = P(c0), [x1, y1] = P(c1), o = R ? 3 : -3;
+    INK = ink0; poly([x0, y0 - t - 1.4, x1, y1 - t - 1.4, x1 + o, y1 - t, x0 + o, y0 - t], CH_RIM[0]); }
+  INK = ink0;
+}
 const FLAT = new Set(['rockgarden','starmoss','garden','field','reserve','fountain','vineyard','quarry','road','paving','grove','ngrove','bulldoze','select','assign']);
 function drawBuilding(t, lvl, cx, cy, time, i){
   if (t === 'site'){ drawSite(B[i], cx, cy, time, i); return; }
@@ -4575,7 +4633,7 @@ function drawBuilding(t, lvl, cx, cy, time, i){
   switch (t){
     case 'rockgarden': drawRockGarden(cx, cy, i); break;
     case 'hall': drawHall(Math.max(1, Math.min(HALL_PH.length, lvl | 0)), cx, cy, time, i); break;
-    case 'house': drawHouse(lvl, cx, cy); break;
+    case 'house': if (lvl > 0 && i >= 0 && B[i] && B[i].f && B[i].f.nm === CHUP) drawChupHouse(cx, cy, i); else drawHouse(lvl, cx, cy); break;
     case 'road': drawRoad(cx, cy); break;
     case 'paving': { const k = mzPick(false, i); drawRoad(cx, cy, true, k >= 0 ? mosList[k] : null); break; }
     case 'grove': cypress(cx-6, cy+2, 12); cypress(cx+5, cy+4, 9); break;
@@ -5485,17 +5543,17 @@ function folkFig(mid){
   return { t: st === 0 ? (fe ? 'girl' : 'boy') : st === 2 ? (fe ? 'grandma' : 'grandpa') : (fe ? 'woman' : 'man'),
     sk:SKIN[h % 5], hr: st === 2 ? GREY[(h >>> 3) % 2] : HAIR[(h >>> 3) % 5] };
 }
-// the son's version: a slim figure with arms and legs, blue trousers and a white T-shirt (col is no longer used: everyone dresses alike).
+// the son's version: a slim figure with arms and legs, blue trousers (dark blue for the men and boys) and a white T-shirt (col is no longer used).
 // step swings the legs and, the other way, the arms; up lifts the arms (a kid playing with a fluffy)
-const PANTS = '#3f66b8', PANTS_D = '#2f4f93', SHIRT = '#fbfaf6', SHIRT_L = '#a89d90', SHOES = '#3a3030';
+const PANTS = '#3f66b8', PANTS_D = '#2f4f93', PANTS_M = '#26386a', PANTS_MD = '#1b2a52', MALE_FIG = /^(boy|man|grandpa)$/, SHIRT = '#fbfaf6', SHIRT_L = '#a89d90', SHOES = '#3a3030';
 function personBody(cx, cy, k, step, col, fg, up = 0){
-  const sk = fg ? fg.sk : '#e8c39e', sh = cy - 9.8*k, wa = cy - 5.2*k, hip = cy - 4.4*k, ft = cy - .5*k, cap = ctx.lineCap;
+  const sk = fg ? fg.sk : '#e8c39e', male = !!fg && MALE_FIG.test(fg.t), pc = male ? PANTS_M : PANTS, pd = male ? PANTS_MD : PANTS_D, sh = cy - 9.8*k, wa = cy - 5.2*k, hip = cy - 4.4*k, ft = cy - .5*k, cap = ctx.lineCap;
   ctx.lineCap = 'round';
   // legs in blue trousers, and shoes
   const lx = cx - .95*k + step*.55, rx = cx + .95*k - step*.55;
-  ctx.strokeStyle = PANTS; ctx.lineWidth = 1.75*k; ctx.beginPath(); ctx.moveTo(cx - .95*k, hip); ctx.lineTo(lx, ft); ctx.moveTo(cx + .95*k, hip); ctx.lineTo(rx, ft); ctx.stroke();
+  ctx.strokeStyle = pc; ctx.lineWidth = 1.75*k; ctx.beginPath(); ctx.moveTo(cx - .95*k, hip); ctx.lineTo(lx, ft); ctx.moveTo(cx + .95*k, hip); ctx.lineTo(rx, ft); ctx.stroke();
   ctx.fillStyle = SHOES; for (const x of [lx, rx]){ ctx.beginPath(); ctx.ellipse(x + .5*k, cy - .25*k, 1.15*k, .6*k, 0, 0, Math.PI*2); ctx.fill(); }
-  ctx.fillStyle = PANTS_D; ctx.fillRect(cx - 2*k, wa, 4*k, hip - wa + .6*k);   // the trousers' top, under the shirt
+  ctx.fillStyle = pd; ctx.fillRect(cx - 2*k, wa, 4*k, hip - wa + .6*k);   // the trousers' top, under the shirt
   // the T-shirt: narrow shoulders down to the waist
   ctx.beginPath(); ctx.moveTo(cx - 2.3*k, sh); ctx.lineTo(cx + 2.3*k, sh); ctx.lineTo(cx + 2*k, wa + .3*k); ctx.lineTo(cx - 2*k, wa + .3*k); ctx.closePath();
   ctx.fillStyle = SHIRT; ctx.fill(); ctx.strokeStyle = SHIRT_L; ctx.lineWidth = .6; ctx.stroke();
@@ -5640,10 +5698,10 @@ function shuttleBody(cx, y, open){
   INK = ink;
 }
 // the wish bubble sits just over its own roof, so its tail touches the house it belongs to
-const BUB_DX = 4, BUB_TOP = [0, -24, -20, -28, -30, -36], bubY = l => (BUB_TOP[l] ?? -36) - 19;
+const BUB_DX = 4, BUB_TOP = [0, -24, -20, -28, -30, -36], bubY = (l, i = -1) => (i >= 0 && B[i] && B[i].f && B[i].f.nm === CHUP && l > 0 ? CH_TOP : BUB_TOP[l] ?? -36) - 19;
 function mini(t, lvl, x, y, time, i, s = .3){ ctx.save(); ctx.translate(x, y); ctx.scale(s, s); drawBuilding(t, lvl, 0, 0, time, i); ctx.restore(); }
 function drawWish(cx, cy, f, time, i){
-  const x = cx + BUB_DX, y = cy + bubY(B[i] ? B[i].lvl : 2) + Math.sin(time*2 + i)*1.5, w = f.w, W = WISHES[w.t];
+  const x = cx + BUB_DX, y = cy + bubY(B[i] ? B[i].lvl : 2, i) + Math.sin(time*2 + i)*1.5, w = f.w, W = WISHES[w.t];
   ctx.fillStyle = 'rgba(255,253,246,.97)';
   ctx.beginPath(); ctx.moveTo(x-7, y+8); ctx.lineTo(x-10, y+18); ctx.lineTo(x, y+10); ctx.closePath(); ctx.fill();
   ctx.beginPath(); ctx.ellipse(x, y, 16, 12, 0, 0, Math.PI*2); ctx.fill();
@@ -5666,7 +5724,7 @@ function bubbleAt(sx, sy){
   for (let i = 0; i < N*N; i++){
     const b = B[i]; if (!b || b.t !== 'house' || !b.f || !b.f.w) continue;
     const [cx, cy] = wpos(i % N, (i / N) | 0);
-    const bx = (cx + BUB_DX)*cam.z + cam.x, by = (cy + bubY(b.lvl))*cam.z + cam.y;
+    const bx = (cx + BUB_DX)*cam.z + cam.x, by = (cy + bubY(b.lvl, i))*cam.z + cam.y;
     if (Math.hypot((sx - bx)/16, (sy - by)/12) < cam.z) return i;
   }
   return -1;
@@ -7447,7 +7505,7 @@ function nowShort(m){
 function memberLi(m, f, i){
   const st = stage(m), kid = st === 0;
   let sub = relLabel(m);
-  if (kid) sub += `, вырастет через ${timeStr((ADULT - m.a) / (R.school[i] ? 2 : 1))}`;
+  if (kid && !m.ka) sub += `, вырастет через ${timeStr((ADULT - m.a) / (R.school[i] ? 2 : 1))}`;
   else if (m.fm) sub += ', ' + famRole(m);
   else if (m.c && m.k !== 's') sub += ', ' + craftName(m);
   if (m.g && !kid) sub += `, экзамен союза: ступень ${ROMAN[m.g]}`;
@@ -7515,7 +7573,7 @@ function personCard(){
   if (!P) return `<h2>Житель</h2><p class="sub">Этот житель теперь живёт в другом месте колонии.</p>${XBTN}`;
   const { m, f, i } = P, st = stage(m), w = walkers.find(q => q.mid === m.id);
   const who = m.k === 'h' ? `Глава семьи ${famG(f)}` : `${ucf(relLabel(m))} в семье ${famG(f)}`;
-  const what = st === 0 ? `ребёнок, вырастет через ${timeStr((ADULT - m.a) / (R.school[i] ? 2 : 1))}` : m.fm ? famRole(m) : m.c && m.k !== 's' ? craftName(m) : st === 2 ? 'в летах' : gw(m, 'работник колонии', 'работница колонии');
+  const what = st === 0 ? (m.ka ? 'ребёнок' : `ребёнок, вырастет через ${timeStr((ADULT - m.a) / (R.school[i] ? 2 : 1))}`) : m.fm ? famRole(m) : m.c && m.k !== 's' ? craftName(m) : st === 2 ? 'в летах' : gw(m, 'работник колонии', 'работница колонии');
   const left = w ? Math.max(1, w.path.length - 1 - w.pi + (w.p > 0 ? 1 : 0)) : 0, cells = `${left} ${plural(left, 'клетка', 'клетки', 'клеток')}`;
   const toD = w && B[w.dest] && w.kind !== 'arrive' ? (w.kind === 'visit' && B[w.dest].f ? ` к ${famD(B[w.dest].f)}` : `: ${placeName(w.dest)}`) : '';
   const hb = hobbyOf(m);
@@ -9097,12 +9155,14 @@ $('guildOv').addEventListener('change', e => { const s = e.target.closest('selec
 const NAME_MAX = 20;
 // letters, spaces and hyphens only, the first letter capital
 function cleanName(s){ s = String(s || '').replace(/[^A-Za-zА-Яа-яЁё\- ]/g, '').replace(/\s+/g, ' ').trim().slice(0, NAME_MAX).trim(); return s ? s[0].toUpperCase() + s.slice(1) : ''; }
-const nameParts = m => { const [a, ...r] = m.n.split(' '); return [a, r.join(' ')]; };
+// the first name and the surname; a patronymic (ot) is kept apart and stays as it is whatever the players rename
+const nameParts = m => { let [a, ...r] = m.n.split(' '); if (m.ot && r[0] === m.ot) r = r.slice(1); return [a, r.join(' ')]; };
+const withOt = (m, a, l) => [a, m.ot, l].filter(Boolean).join(' ');
 // a resident: the new first name and surname are theirs alone; '' when done, otherwise what is wrong
 function renamePerson(mid, first, last){
   const P = findMember(mid); if (!P) return 'Этого жителя уже нет в колонии.';
   const a = cleanName(first), b = cleanName(last); if (!a) return 'Впишите имя.';
-  const was = P.m.n; P.m.n = b ? a + ' ' + b : a;
+  const was = P.m.n; P.m.n = withOt(P.m, a, b);
   if (was !== P.m.n) chronicle(`${was} теперь зовётся ${P.m.n}.`);
   return '';
 }
@@ -9112,7 +9172,7 @@ function renameFamily(i, sur){
   const s = cleanName(sur).replace(/\s/g, '-'); if (!s) return 'Впишите фамилию.';
   const f = b.f, old = famSur(f), oF = surF(old); if (s === old) return '';
   const wasPl = famPl(f);
-  for (const m of f.m){ const [a, l] = nameParts(m); if (l === old) m.n = a + ' ' + s; else if (l === oF) m.n = a + ' ' + surF(s); }
+  for (const m of f.m){ const [a, l] = nameParts(m); if (l === old) m.n = withOt(m, a, s); else if (l === oF) m.n = withOt(m, a, surF(s)); }
   f.sn = s;
   chronicle(`${wasPl} взяли новую фамилию: теперь это ${famPl(f)}.`);
   return '';
@@ -9122,7 +9182,7 @@ let nameQ = null;
 function openName(q){
   nameQ = q; $('nameNote').textContent = '';
   if (q.mid !== undefined){ const P = findMember(q.mid); if (!P) return; const [a, l] = nameParts(P.m);
-    $('nameTitle').textContent = 'Новое имя'; $('nameLead').textContent = `Как теперь зовут: ${P.m.n}? Фамилия поменяется только у ${gw(P.m, 'него', 'неё')}.`;
+    $('nameTitle').textContent = 'Новое имя'; $('nameLead').textContent = `Как теперь зовут: ${P.m.n}? Фамилия поменяется только у ${gw(P.m, 'него', 'неё')}.${P.m.ot ? ` Отчество ${P.m.ot} останется.` : ''}`;
     $('nameFirstL').hidden = false; $('nameFirst').value = a; $('nameLast').value = l; }
   else { const b = B[q.home]; if (!b || !b.f) return;
     $('nameTitle').textContent = 'Новая фамилия семьи'; $('nameLead').textContent = `Фамилию семьи ${famG(b.f)} возьмут все, кто её носит. Впишите её так, как у мужчины: например, Петров.`;
@@ -9364,6 +9424,12 @@ function load(d){
   for (const b of B) if (b && b.f){ uid = Math.max(uid, (b.f.id || 0) + 1); for (const m of b.f.m) uid = Math.max(uid, (m.id || 0) + 1); }
   // the son's version: Евгений Чупров lives with his son only; a wife a save already has goes, once (nw marks it done)
   for (const b of B) if (b && b.f && b.f.nm === CHUP){ const h = b.f.m.find(m => m.k === 'h'); if (h && h.n === 'Евгений Чупров' && !h.nw){ h.nw = 1; b.f.m = b.f.m.filter(m => m.k !== 's'); } }
+  // and Степан stays a child: a save where he has already grown up makes him a boy again, with no craft or fame (ka marks it done)
+  for (const b of B) if (b && b.f && b.f.nm === CHUP) for (const m of b.f.m) if (/^Степан .*Чупров$/.test(m.n) && m.k === 'c' && !m.ka){ m.ka = 1; if (m.a >= ADULT){ m.a = 100*LIFE_K; delete m.c; delete m.fm; } }
+  // and the elders come: a save from before gets grandpa and great-grandpa, Евгений and Степан their patronymics, Евгений an age that stays (ot marks it done)
+  for (const b of B) if (b && b.f && b.f.nm === CHUP){ const f = b.f, h = f.m.find(m => m.k === 'h'); if (!h || h.ot) continue;
+    const [a, ...r] = h.n.split(' '); h.ot = 'Александрович'; h.n = [a, h.ot, ...r].join(' '); h.ka = 1; f.m.push(...chupElders(famSur(f)));
+    const s = f.m.find(m => m.k === 'c' && m.ka && !m.ot); if (s){ const [a, ...r] = s.n.split(' '); s.ot = 'Евгеньевич'; s.n = [a, s.ot, ...r].join(' '); } }
   for (const b of B) if (b && b.f && b.f.fs !== undefined){ const o = b.f.fs, fs = {};   // friendships: ids to points, nothing else
     if (o && typeof o === 'object' && !Array.isArray(o)) for (const k in o){ const v = +o[k]; if (/^\d+$/.test(k) && v > 0) fs[k] = Math.min(FF_CAP, v); }
     b.f.fs = fs; }

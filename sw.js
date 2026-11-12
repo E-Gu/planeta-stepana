@@ -1,7 +1,7 @@
 // «Первое лето» on its own site: keeps the game on the device, so it opens without the network, and takes a new version when there is one.
 // python3 build.py --site fills in VERSION (a hash of everything the site holds) and FILES; a new build is a new sw.js, so the browser installs it,
 // it puts the whole new game aside, takes over and lets the old copy go. Saves are not here: they live in the page's own storage, which this never touches.
-const VERSION = '197f1cf37600';
+const VERSION = '8c24aaf90623';
 const FILES = ["./", "index.html", "apple-touch-icon.png", "art/art.js", "icon-192.png", "icon-512.png", "manifest.webmanifest"];
 const CACHE = 'leto-' + VERSION;
 const FRESH = /(^|\/)(index\.html|art\/art\.js)?$/;   // the page and the list of drawings: asked from the network first, so an online start gets the new version at once
