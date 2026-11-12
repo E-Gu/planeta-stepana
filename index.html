@@ -14,7 +14,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>#trayWrap{padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}</style>
-<script>window.LETO_SITE={v:'d34a7284af41',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
+<script>window.LETO_SITE={v:'197f1cf37600',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1143,9 +1143,10 @@ function newFamily(craft){
   return f;
 }
 // the Chuprovs: dad Евгений and his son Степан, and their fluffy Василиса (white, a rainbow collar, the mushroom-picker's talent), who never leaves them
+// the son's version: папа and сын, no wife — nw keeps Евгений from a wedding at home (it rides along in saves and flights)
 function chuprovs(craft){
   const f = newFamily(craft); f.nm = CHUP;
-  f.m = [{ id:uid++, n:'Евгений Чупров', s:'m', a:600*LIFE_K, k:'h', c:craft }, { id:uid++, n:'Степан Чупров', s:'m', a:100*LIFE_K, k:'c' }];
+  f.m = [{ id:uid++, n:'Евгений Чупров', s:'m', a:600*LIFE_K, k:'h', c:craft, nw:1 }, { id:uid++, n:'Степан Чупров', s:'m', a:100*LIFE_K, k:'c' }];
   return f;
 }
 const VAS_K = 3, vasPet = () => ({ k:VAS_K, n:'Василиса', tr:0, w:1 }), isVas = p => !!(p && p.w);
@@ -2461,7 +2462,7 @@ function familyTick(){
     for (const m of f.m.slice()) if (m.a > PASS && !m.fm && Math.random() < 1/(600*LIFE_K)) passAway(m, f);
     const h = headOf(f), sp = f.m.find(m => m.k === 's');
     if (h && sp && stage(h) === 1 && stage(sp) === 1){ if (f.m.length < FAM_MAX && Math.random() < (f.tr.includes('fertile') ? 2 : 1)*(B[i].pet ? 1.5 : 1)/BIRTH_T) birth(f); }
-    else if (h && !sp && stage(h) === 1 && Math.random() < 1/150) marryIn(f);
+    else if (h && !sp && !h.nw && stage(h) === 1 && Math.random() < 1/150) marryIn(f);
     if (!wed && plots.length && arrive.ok){
       const gr = f.m.filter(m => (m.k === 'c' || m.k === 'b' || m.k === 'r') && stage(m) === 1);
       if (gr.length && Math.random() < gr.length/240){ weddingOut(rpick(gr), f, i, plots); wed = true; shuttle = 0; }
@@ -9361,6 +9362,8 @@ function load(d){
   DG = d.dg ? dgLoad(d.dg) : null; CR = d.cr ? crLoad(d.cr) : null; crBind();
   guildIntro = !d.gu && tier >= 3;
   for (const b of B) if (b && b.f){ uid = Math.max(uid, (b.f.id || 0) + 1); for (const m of b.f.m) uid = Math.max(uid, (m.id || 0) + 1); }
+  // the son's version: Евгений Чупров lives with his son only; a wife a save already has goes, once (nw marks it done)
+  for (const b of B) if (b && b.f && b.f.nm === CHUP){ const h = b.f.m.find(m => m.k === 'h'); if (h && h.n === 'Евгений Чупров' && !h.nw){ h.nw = 1; b.f.m = b.f.m.filter(m => m.k !== 's'); } }
   for (const b of B) if (b && b.f && b.f.fs !== undefined){ const o = b.f.fs, fs = {};   // friendships: ids to points, nothing else
     if (o && typeof o === 'object' && !Array.isArray(o)) for (const k in o){ const v = +o[k]; if (/^\d+$/.test(k) && v > 0) fs[k] = Math.min(FF_CAP, v); }
     b.f.fs = fs; }
