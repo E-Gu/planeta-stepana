@@ -14,7 +14,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>#trayWrap{padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}</style>
-<script>window.LETO_SITE={v:'3149126ae433'};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
+<script>window.LETO_SITE={v:'c02010720ebd',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -572,6 +572,10 @@ button.rchip:hover{border-color:var(--gold)}
 .nmf input{font:inherit;font-size:17px;color:var(--ink);background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-width:0}
 .nmf input:focus{outline:2px solid var(--accent);outline-offset:1px}
 .members .mbtn{display:flex;gap:6px;align-items:center}
+.sycode{font-family:ui-monospace,Menlo,monospace;font-size:18px;letter-spacing:.06em;color:var(--ink);user-select:all;-webkit-user-select:all}
+.syf{display:flex;gap:8px;margin-top:8px}
+.syf input{flex:1;font:inherit;font-family:ui-monospace,Menlo,monospace;font-size:17px;color:var(--ink);background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-width:0}
+.syf input:focus{outline:2px solid var(--accent);outline-offset:1px}
 </style>
 
 <div id="app">
@@ -9518,30 +9522,39 @@ function slotLoad(n){
   toast('Сохранение загружено', `Колония вернулась к сохранению из ячейки ${n}: ${slotWhen(s.m.at).toLowerCase()}.`);
   return true;
 }
-const SLOT_W = { both:'В этом браузере и в вашем аккаунте Claude', here:SITE ? 'В памяти этого устройства' : 'Только в этом браузере', cloud:'В вашем аккаунте Claude' };
+const SLOT_W = SITE ? { both:'На этом устройстве и в облаке', here:'В памяти этого устройства', cloud:'В облаке, с другого устройства' }
+  : { both:'В этом браузере и в вашем аккаунте Claude', here:'Только в этом браузере', cloud:'В вашем аккаунте Claude' };
+const CL_IN = SITE ? 'В облаке синхронизации' : 'В вашем аккаунте Claude', CL_FROM = SITE ? 'из облака синхронизации' : 'из аккаунта Claude';   // where the copy kept away from this device lies
 function slotWhereText(){
   return slotWhereBase() + slotAutoText();
 }
 function slotAutoText(){
   const tm = t => slotWhen(t).toLowerCase();
   let s = SV.bad ? ' В память этого браузера сейчас записать не получается.' : SV.at ? ` Автосохранение в браузере: ${tm(SV.at)}.` : '';
-  if (CL.st === 'on' && CL.upAt) s += ` В аккаунте Claude: ${tm(CL.upAt)}.`;
+  if (CL.st === 'on' && CL.upAt) s += ` ${SITE ? 'В облаке' : 'В аккаунте Claude'}: ${tm(CL.upAt)}.`;
   return s;
 }
 function slotWhereBase(){
+  if (SITE) return slotSiteText();
   const e = { full:' В аккаунте Claude не хватило места, поэтому последние изменения пока лежат только в этом браузере.', net:' Последнее сохранение до аккаунта Claude не дошло, игра попробует ещё раз.',
     big:' Одна колония выросла больше, чем помещается в аккаунт Claude, и она лежит только в этом браузере: её можно скачать файлом.' }[CL.err] || '';
   if (CL.st === 'on') return 'Ячейки и автосохранение лежат в этом браузере и в вашем аккаунте Claude, вместе со ссылкой на игру. Даже если браузер забудет игру, по этой ссылке она вернётся.' + e;
   if (CL.st === 'wait') return CL.slow ? 'Аккаунт Claude пока не отвечает. Игра идёт и сохраняется в этом браузере.' : 'Ищем ваши сохранения в аккаунте Claude…';
   if (CL.st === 'ro') return 'Аккаунт Claude не принимает сохранения с этой ссылки. Ячейки лежат в этом браузере, а колонию можно скачать файлом.';
   if (CL.st === 'lost') return 'До аккаунта Claude сейчас не достучаться. Игра сохраняется в этом браузере, а колонию можно скачать файлом.' + (CL.dead ? '' : ' Игра попробует ещё раз сама.');
-  if (SITE) return slotSiteText();
   return 'Ячейки и автосохранение лежат в этом браузере. Браузер иногда сам стирает свою память, поэтому колонию можно скачать файлом и потом открыть из файла.';
 }
 function slotSiteText(){
   let s = 'Игра лежит в памяти этого устройства, на этом сайте: ей не нужны ни аккаунт, ни сеть.';
   s += SV.keep === true ? ' Браузер обещал не стирать эту память сам.' : SV.keep === false ? ' Браузер пока не обещал хранить эту память всегда, поэтому иногда скачивайте колонию файлом.' : '';
-  s += ' На другое устройство колонию переносят файлом: здесь «Скачать сохранение», а там «Открыть из файла».';
+  const e = { full:' В облаке не хватило места, поэтому последние изменения пока лежат только здесь.', net:' Последнее сохранение до облака не дошло, игра попробует ещё раз.',
+    big:' Одна колония выросла больше, чем помещается в облако, и она лежит только здесь: её можно скачать файлом.' }[CL.err] || '';
+  if (CL.st === 'on') s += ' Синхронизация включена: колонии, ячейки и прежние копии уходят в облако и приходят на каждое устройство с тем же кодом.' + e;
+  else if (CL.st === 'wait') s += CL.slow ? ' Облако пока не отвечает. Игра идёт и сохраняется здесь.' : ' Ищем колонии в облаке…';
+  else if (CL.st === 'ro') s += ' Облако не принимает сохранения с этим кодом. Колония лежит здесь, и её можно скачать файлом.';
+  else if (CL.st === 'lost') s += ' До облака сейчас не достучаться: нет сети или облако спит. Игра сохраняется здесь и попробует ещё раз сама.';
+  else if (SY.cfg) s += ' На другое устройство колонию переносит синхронизация (она вверху окна), а без неё — файл: здесь «Скачать сохранение», а там «Открыть из файла».';
+  else s += ' На другое устройство колонию переносят файлом: здесь «Скачать сохранение», а там «Открыть из файла».';
   try { if (typeof navigator !== 'undefined' && navigator.standalone === false) s += ' У иконки на экране «Домой» своя память, отдельная от Safari: колонию из этой вкладки перенесите туда файлом.'; } catch (_) {}
   return s;
 }
@@ -9549,9 +9562,10 @@ function renderSlots(){
   $('slotLead').textContent = `Три ячейки для колонии «${COL().name}». Игра и так сохраняется сама, а ячейка хранит колонию, чтобы потом вернуться именно сюда.`;
   const yesNo = y => `<button class="btn primary" type="button" data-slot-yes="1">${y}</button><button class="btn" type="button" data-slot-no="1">Не надо</button>`;
   const who = (pop, t) => `${pop} ${plural(pop, 'житель', 'жителя', 'жителей')}${TIERS[t] ? ` · ступень «${TIERS[t].name}»` : ''}`;
-  let h = '';
+  const inp = $('syIn'), typed = inp ? inp.value : '', had = inp && document.activeElement === inp;   // the code being typed outlives a redraw
+  let h = syEntry();
   if (CL.offer){ const o = CL.offer, ask = slotAsk === 'cl', other = o.c !== colIdx;
-    h += `<div class="entry cur"><span class="mark">↺</span><div><b>Более позднее сохранение в аккаунте Claude</b><p>${slotWhen(o.m.at)} · колония «${COLONIES[o.c].name}» · ${who(Math.max(0, +o.m.pop || 0), o.m.tier)}</p>`
+    h += `<div class="entry cur"><span class="mark">↺</span><div><b>${SITE ? 'Более позднее сохранение с другого устройства' : 'Более позднее сохранение в аккаунте Claude'}</b><p>${slotWhen(o.m.at)} · колония «${COLONIES[o.c].name}» · ${who(Math.max(0, +o.m.pop || 0), o.m.tier)}</p>`
       + (ask ? `<p class="ask">${other ? `Игра перелетит в колонию «${COLONIES[o.c].name}» и продолжится с этого сохранения. Колония «${COL().name}» останется в своём автосохранении.` : 'Колония вернётся к этому сохранению. Всё, что сделано с начала этой игры и не сохранено в ячейку, заменится.'}</p><div class="rq-btns">${yesNo('Загрузить')}</div>`
         : `<p class="eff">Сейчас игра идёт с более раннего сохранения из этого браузера.</p><div class="rq-btns"><button class="btn primary" type="button" data-slot-cl="1">Загрузить</button><button class="btn" type="button" data-slot-clno="1">Не надо</button></div>`) + '</div></div>'; }
   if (fileQ){ const F = fileQ, other = F.c !== colIdx, k = Object.values(F.slots).filter(Boolean).length;
@@ -9573,16 +9587,18 @@ function renderSlots(){
       h += `<div class="entry${ask ? ' cur' : ''}"><span class="mark">↶</span><div><b>${slotWhen(at)}</b><p>${who(Math.max(0, +e.m.pop || 0), e.m.tier)}</p><p class="eff">${BAK_WHY[e.m.why] || 'Прежняя копия'}</p>`
         + (ask ? `<p class="ask">Колония вернётся к этой копии. То, что есть сейчас, тоже будет отложено в прежние копии.</p><div class="rq-btns">${yesNo('Загрузить')}</div>` : `<div class="rq-btns"><button class="btn" type="button" data-bak-load="${at}">Загрузить</button></div>`) + '</div></div>'; } }
   $('slotList').innerHTML = h; $('slotNote').textContent = slotNote; $('slotWhere').textContent = slotWhereText();
+  { const n = $('syIn'); if (n){ n.value = typed; if (had || slotAsk === 'sy') try { n.focus(); } catch (_) {} } }
 }
 function slotRefresh(){ if ($('slotOv').hidden === false) renderSlots(); }
 function openSlots(){ closeFly(); slotAsk = 0; slotNote = ''; fileQ = null; bakOpen = false; renderSlots(); document.querySelectorAll('.overlay').forEach(o => o.hidden = true); $('slotOv').hidden = false; $('sSave').classList.remove('fresh'); }
 function slotClick(t){ const d = t.dataset;
+  if (syClick(d)) return;
   if (d.slotSave){ const n = +d.slotSave; slotNote = ''; if (slotRead(n)){ slotAsk = n; slotAct = 'save'; } else { slotAsk = 0; slotSave(n); } renderSlots(); }
   else if (d.slotLoad){ slotAsk = +d.slotLoad; slotAct = 'load'; slotNote = ''; renderSlots(); }
   else if (d.bakOpen){ bakOpen = true; renderSlots(); }
   else if (d.bakLoad){ slotAsk = 'b' + d.bakLoad; slotAct = 'bak'; slotNote = ''; renderSlots(); }
   else if (d.slotCl){ slotAsk = 'cl'; slotAct = 'cload'; slotNote = ''; renderSlots(); }
-  else if (d.slotClno){ CL.offer = null; CL.hold = -1; slotAsk = 0; slotNote = 'Хорошо. Игра идёт дальше отсюда, и её автосохранение заменит то, что лежало в аккаунте Claude.'; cloudAuto(); renderSlots(); }
+  else if (d.slotClno){ CL.offer = null; CL.hold = -1; slotAsk = 0; slotNote = `Хорошо. Игра идёт дальше отсюда, и её автосохранение заменит то, что лежало ${SITE ? 'в облаке' : 'в аккаунте Claude'}.`; cloudAuto(); renderSlots(); }
   else if (d.slotYes){ const n = slotAsk, a = slotAct; slotAsk = 0;
     if (a === 'save'){ slotSave(n); renderSlots(); }
     else if (a === 'cload' ? cloudOffer() : a === 'file' ? fileApply() : a === 'bak' ? bakLoad(+String(n).slice(1)) : slotLoad(n)) $('slotOv').hidden = true; else renderSlots(); }
@@ -9600,6 +9616,77 @@ const CL = { st:'off', ref:null, docs:new Map(), sent:new Map(), q:new Map(), bu
 // hold: a colony whose autosave is not sent while a newer copy is offered; chk: the page was just shown again and is asking whether another device has played since;
 // loaded: a save was loaded or the colony changed since the page opened; bootTxt: the browser's autosave as the page found it
 const clAuto = c => 'auto-' + COLONIES[c].id, clSlot = (c, n) => `slot-${COLONIES[c].id}-${n}`;
+
+/* ---------- the son's site: his phone and tablet keep in step through a small store of his own (Supabase, src/site/supabase.sql; build.py puts its
+   address and publishable key into window.LETO_SITE.sb). A secret code, made on one device and typed on the other, is the whole key: the store answers
+   only the documents of that code. It stands in for the link's db, so everything above (the newest copy wins, the offers, the spare copies, the queue)
+   works here the same ---------- */
+const SY_KEY = 'leto-sync', SY_ABC = 'abcdefghjkmnpqrstuvwxyz23456789', SY_LEN = 16;   // no i, l, o, 0, 1: nothing to mix up when the code is typed
+const SY = { cfg:(() => { try { const b = SITE && window.LETO_SITE.sb; return b && /^https:\/\/[\w.-]+$/.test(b.u) && b.k ? b : null; } catch (_) { return null; } })() };
+const syNorm = t => String(t || '').toLowerCase().replace(/[\s-]+/g, '');
+const syOk = t => new RegExp(`^[${SY_ABC}]{${SY_LEN}}$`).test(t);
+const syShow = t => t.match(/.{1,4}/g).join('-');
+function syCode(){ try { const t = localStorage.getItem(SY_KEY); return t && syOk(t) ? t : null; } catch (_) { return null; } }
+function syMake(){ const r = new Uint32Array(SY_LEN); crypto.getRandomValues(r); return [...r].map(v => SY_ABC[v % SY_ABC.length]).join(''); }
+// one function of the store; its errors come back with the codes the link's db uses, so the queue treats them alike
+function syCall(fn, args){
+  return fetch(`${SY.cfg.u}/rest/v1/rpc/${fn}`, { method:'POST', cache:'no-store', headers:{ apikey:SY.cfg.k, 'Content-Type':'application/json' }, body:JSON.stringify(args) })
+    .then(async r => { const t = await r.text(); let v = null; try { v = t ? JSON.parse(t) : null; } catch (_) {}
+      if (r.ok) return v;
+      const c = v && v.code; throw { code: c === '54000' ? 'quota_exceeded' : c === '22023' ? 'invalid_argument' : 'unavailable' }; },
+      () => { throw { code:'unavailable' }; });
+}
+const syDoc = (code, name) => ({
+  get: () => syCall('sync_get', { p_code:code, p_name:name }).then(b => ({ exists: !!(b && typeof b === 'object'), data: () => b })),
+  set: body => syCall('sync_put', { p_code:code, p_name:name, p_body:body }),
+  delete: () => syCall('sync_del', { p_code:code, p_name:name }) });
+const syCol = code => ({ doc: name => syDoc(code, name),
+  get: () => syCall('sync_list', { p_code:code }).then(L => ({ docs:(Array.isArray(L) ? L : []).map(r => ({ id:r.name, exists:true, data: () => r.body })) })) });
+function syStart(){
+  const code = syCode(); if (!SY.cfg || !code) return;
+  CL.ref = syCol(code); CL.st = 'wait'; CL.tries = 0; CL.dead = false; CL.err = ''; CL.slow = false; slotRefresh(); cloudRead();
+}
+// a code typed or made after the page opened: the colony as it is now is what the store's copies are weighed against
+function syOn(code){
+  save(); try { localStorage.setItem(SY_KEY, code); } catch (_) { return false; }
+  CL.boot = stampRead(); CL.bootCol = colIdx; CL.col = colIdx; try { CL.bootTxt = localStorage.getItem(saveKey(colIdx)); } catch (_) {}
+  if (CL.loaded) CL.fresh = false;   // a new game the page started with still counts as nothing worth keeping, until a save was loaded
+  syStart(); return true;
+}
+function syOff(){
+  try { localStorage.removeItem(SY_KEY); } catch (_) {}
+  CL.st = 'off'; CL.ref = null; CL.docs.clear(); CL.sent.clear(); CL.q.clear(); CL.offer = null; CL.hold = -1; CL.err = ''; CL.upAt = 0; CL.slow = false;
+}
+// the first entry of «Сохранения» on the son's site
+function syEntry(){
+  if (!SY.cfg) return '';
+  const code = syCode(), wrap = (b, rest) => `<div class="entry${slotAsk === 'sy' || slotAsk === 'syoff' ? ' cur' : code ? '' : ' skip'}"><span class="mark">⇄</span><div><b>${b}</b>${rest}</div></div>`;
+  if (code){
+    const st = { on:'Колонии этого устройства и облака сейчас одни и те же.', wait:'Ищем колонии в облаке…', lost:'До облака сейчас не достучаться. Игра сохраняется здесь и попробует ещё раз сама.',
+      ro:'Облако не принимает сохранения с этим кодом.' }[CL.st] || '';
+    return wrap('Синхронизация включена', `<p>Код: <span class="sycode">${syShow(code)}</span></p><p class="eff">Введите этот код на другом устройстве, в этом же окне, кнопкой «У меня есть код». ${st}</p>`
+      + (slotAsk === 'syoff' ? `<p class="ask">Это устройство перестанет получать колонии с других устройств, а всё, что лежит здесь, останется здесь. Код запишите: с ним синхронизацию можно включить снова.</p><div class="rq-btns"><button class="btn primary" type="button" data-sy-off="1">Отключить</button><button class="btn" type="button" data-sy-cancel="1">Не надо</button></div>`
+        : `<div class="rq-btns"><button class="btn" type="button" data-sy-ask-off="1">Отключить на этом устройстве</button></div>`));
+  }
+  if (slotAsk === 'sy') return wrap('Код с другого устройства', `<p class="eff">Код показан в окне «Сохранения» на устройстве, где синхронизация уже включена: ${SY_LEN} букв и цифр.</p>`
+    + `<div class="syf"><input id="syIn" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="24" placeholder="xxxx-xxxx-xxxx-xxxx" aria-label="Код синхронизации"></div>`
+    + `<div class="rq-btns"><button class="btn primary" type="button" data-sy-join="1">Подключить</button><button class="btn" type="button" data-sy-cancel="1">Отмена</button></div>`);
+  return wrap('Телефон и планшет вместе', '<p class="eff">Включите синхронизацию на одном устройстве, и игра покажет код. На другом устройстве нажмите «У меня есть код» и введите его: колонии на них будут одни и те же. Нужна сеть, хотя бы иногда.</p>'
+    + '<div class="rq-btns"><button class="btn primary" type="button" data-sy-new="1">Включить</button><button class="btn" type="button" data-sy-have="1">У меня есть код</button></div>');
+}
+$('slotList').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'syIn'){ e.preventDefault(); syClick({ syJoin:'1' }); } });
+function syClick(d){
+  if (d.syNew){ slotAsk = 0; slotNote = syOn(syMake()) ? 'Синхронизация включена. Запишите код: он нужен на другом устройстве.' : 'Не получилось записать код в память этого устройства.'; }
+  else if (d.syHave){ slotAsk = 'sy'; slotNote = ''; }
+  else if (d.syJoin){ const t = syNorm(($('syIn') || {}).value);
+    if (!syOk(t)){ slotNote = `В коде ${SY_LEN} букв и цифр, без букв i, l, o и цифр 0 и 1. Проверьте его ещё раз.`; renderSlots(); return true; }
+    slotAsk = 0; slotNote = syOn(t) ? 'Код принят. Игра ищет колонии в облаке и возьмёт самые поздние.' : 'Не получилось записать код в память этого устройства.'; }
+  else if (d.syAskOff){ slotAsk = 'syoff'; slotNote = ''; }
+  else if (d.syOff){ syOff(); slotAsk = 0; slotNote = 'Синхронизация на этом устройстве выключена. Всё, что лежит здесь, осталось здесь.'; }
+  else if (d.syCancel){ slotAsk = 0; slotNote = ''; }
+  else return false;
+  renderSlots(); return true;
+}
 const clPack = (m, d) => ({ v:1, m:{ ...m }, s:JSON.stringify(d) });   // the save rides as one string, so the nested arrays and every number come back exactly
 const clGetRaw = name => { const b = CL.st === 'off' ? null : CL.docs.get(name); return b && b.m && typeof b.s === 'string' ? b.s : null; };
 function clGet(name){ const t = clGetRaw(name); if (!t) return null;
@@ -9616,6 +9703,7 @@ function cloudBoot(fresh){
   CL.dl = clUse('downloads'); cloudInit();
 }
 async function cloudInit(){
+  if (SITE){ syStart(); return; }   // the son's site has no account: its own store, under the code of this device
   const [db, user] = await Promise.all([clUse('db'), clUse('user')]);
   if (!db || !user) return;
   let uid = null; try { uid = await user.id(); } catch (_) {}
@@ -9677,7 +9765,7 @@ function cloudAdopt(){
   if (k >= 0){ const C = cl[k], young = !CL.loaded && performance.now() - CL.t0 < CLOUD_YOUNG*1000;
     // nobody has pressed anything, or the page opened minutes ago: the newer copy is simply taken, and what it replaces goes to the spare copies
     if ((!CL.touched || young) && !busyWin() && cloudTake(k, C, false))
-      toast('Колония вернулась', `В вашем аккаунте Claude нашлось более позднее сохранение колонии «${COL().name}» (${slotWhen(C.m.at).toLowerCase()}), и игра продолжилась с него.`, false, 9000);
+      toast('Колония вернулась', `${CL_IN} нашлось более позднее сохранение колонии «${COL().name}» (${slotWhen(C.m.at).toLowerCase()}), и игра продолжилась с него.`, false, 9000);
     else cloudOfferSet(k, C.m, cl[colIdx] && +cl[colIdx].m.at > CL.ha[colIdx]);
   }
   cloudAuto();
@@ -9685,7 +9773,7 @@ function cloudAdopt(){
 // a newer copy that is not taken by itself: it waits in «Сохранения», the autosave does not go over it meanwhile, and the window opens if nothing else is open
 function cloudOfferSet(k, m, hold){
   CL.offer = { c:k, m }; CL.hold = hold ? colIdx : -1; $('sSave').classList.add('fresh');
-  toast('Есть более позднее сохранение', `В вашем аккаунте Claude лежит колония «${COLONIES[k].name}» от ${slotWhen(m.at).toLowerCase()}. Её можно загрузить в окне «Сохранения».`, false, 12000);
+  toast('Есть более позднее сохранение', `${CL_IN} лежит колония «${COLONIES[k].name}» от ${slotWhen(m.at).toLowerCase()}. Её можно загрузить в окне «Сохранения».`, false, 12000);
   try { if (!busyWin() && ![...document.querySelectorAll('.overlay')].some(o => !o.hidden)) openSlots(); } catch (_) {}
 }
 // the page is shown again after a while: if another device has sent this colony up since, that save is the later one
@@ -9719,7 +9807,7 @@ function cloudTake(k, C, keep){
 const cl0 = c => clGet(clAuto(c));
 function cloudOffer(){
   const o = CL.offer, C = o && cl0(o.c);
-  if (C && cloudTake(o.c, C, true)){ toast('Сохранение загружено', `Колония «${COL().name}» продолжается с сохранения из аккаунта Claude: ${slotWhen(C.m.at).toLowerCase()}.`); slotNote = ''; return true; }
+  if (C && cloudTake(o.c, C, true)){ toast('Сохранение загружено', `Колония «${COL().name}» продолжается с сохранения ${CL_FROM}: ${slotWhen(C.m.at).toLowerCase()}.`); slotNote = ''; return true; }
   slotNote = 'Это сохранение не получилось открыть. Колония осталась такой, как была.'; return false;
 }
 // one write at a time, the newest body per document; an unchanged save is not sent again
