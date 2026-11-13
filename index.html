@@ -14,7 +14,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>#trayWrap{padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}</style>
-<script>window.LETO_SITE={v:'d63da224bd89',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
+<script>window.LETO_SITE={v:'64dc8a05c23e',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3107,7 +3107,7 @@ function dreamCard(i, f){
 }
 
 /* ---------- the home fluffy beside its family: it walks, plays, sleeps and greets; only for the eye, never saved ---------- */
-// the character comes from the name, so a fluffy keeps it in every colony
+// the character comes from the name, so a fluffy keeps it in every colony; Василиса is curious (PET_CH[3])
 const PET_CH = [
   { id:'sleepy',  n:'соня',       d:'любит подремать, а в хорошую погоду спит на крыше', w:{ sleep:4, play:.8, roam:.4, mush:.5 }, esc:.2, greet:.45, rest:[9, 16], roof:.6 },
   { id:'fidget',  n:'непоседа',   d:'всё время в движении: играет и бегает к соседям', w:{ sleep:.4, play:3, roam:2.2, mush:.6 }, esc:.55, greet:.8, rest:[3, 6], roof:.2 },
@@ -3115,7 +3115,7 @@ const PET_CH = [
   { id:'curious', n:'любопытный', d:'провожает своих до самой двери и заглядывает к соседям', w:{ sleep:.8, play:1, roam:3, mush:.8 }, esc:.85, greet:.6, rest:[4, 8], roof:.3 },
   { id:'tender',  n:'ласковый',   d:'встречает каждого прыжком и любит играть с детьми', w:{ sleep:1, play:2.6, roam:.5, mush:.6 }, esc:.5, greet:1, rest:[5, 9], roof:.25 }
 ];
-const petCh = p => PET_CH[[...(p.n || 'x')].reduce((a, c) => (a*31 + c.charCodeAt(0)) >>> 0, 13) % PET_CH.length];
+const petCh = p => isVas(p) ? PET_CH[3] : PET_CH[[...(p.n || 'x')].reduce((a, c) => (a*31 + c.charCodeAt(0)) >>> 0, 13) % PET_CH.length];
 let pals = new Map(), palSync = 0;
 const PAL_SP = 26, palRnd = r => r[0] + Math.random()*(r[1] - r[0]);
 const w2t = (wx, wy) => [(wx/(TW/2) + wy/(TH/2))/2, (wy/(TH/2) - wx/(TW/2))/2];
@@ -3307,7 +3307,10 @@ function palDoing(i){
 }
 function drawKid(x, y, mid, time){
   const k = .75, j = Math.max(0, Math.sin(time*5.2 + mid))*2.6, cy = y - j;
-  personBody(x, cy, k, 0, null, folkFig(mid), 1 + j*.25);   // the same figure as on the roads, arms up
+  const fg = folkFig(mid); if (fg.ch) return chupBody(x, cy, k, 0, null, fg, 1 + j*.25);   // a Chuprov: the same figure as on the roads, arms up
+  ctx.strokeStyle = '#5b4434'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(x - 1, cy - 3*k); ctx.lineTo(x - 1.5, cy); ctx.moveTo(x + 1, cy - 3*k); ctx.lineTo(x + 1.5, cy);
+  ctx.moveTo(x - 2.2, cy - 7.5*k); ctx.lineTo(x - 4.2, cy - 10.5*k - j*.6); ctx.moveTo(x + 2.2, cy - 7.5*k); ctx.lineTo(x + 4.2, cy - 10.5*k - j*.6); ctx.stroke();
+  ell(x, cy - 6*k, 3.2*k, 4.4*k, TUNICS[mid % TUNICS.length]); ell(x, cy - 12.5*k, 3*k, 3*k, fg.sk);
 }
 function drawPal(a, i, time){
   const b = B[i]; if (!b || !b.pet) return;
@@ -5122,7 +5125,7 @@ const HAIR_HOW = 'Слой поверх тела того же шага: игр�
 for (const [t, ru, en] of FOLK) for (let f = 1; f <= 2; f++){
   const fg = { t, sk:'#f2eee8', hr:'#e8e4dc' }, st = f === 1 ? 1.4 : -1.4, nm = `person-${t}-${f}`, k = folkK(t);
   const who = en, foot = f === 1 ? 'left foot forward' : 'right foot forward';
-  gameSlot(nm, 16, 24, 8, 22, `${ru}, шаг ${f}: тело`, (x, y) => personBody(x, y, k, st, '#f2eee8', fg), 'life',
+  gameSlot(nm, 16, 24, 8, 22, `${ru}, шаг ${f}: тело`, (x, y) => personBody(x, y, k, st, '#f2eee8', fg, 0, [1, true]), 'life',
     `a tiny colonist, ${who}, walking to the right, ${foot}, all in light grey, thin dark outline`, WALK_HOW);
   gameSlot(nm + '-clothes', 16, 24, 8, 22, `${ru}, шаг ${f}: только одежда`, (x, y) => ell(x, y - 6*k, 3.2*k, 4.4*k, '#e8e4dc'), 'life',
     `only the jumpsuit of a tiny walking colonist, ${en}, light grey, no head, no hands`, CLOTH_HOW);
@@ -5508,7 +5511,7 @@ function drawWalker(w, x, y, time){
     drawArtTint(nm, cx, cy, fg.sk, 'multiply', 1, fl);
     if (artImg[nm + '-clothes']) drawArtTint(nm + '-clothes', cx, cy, w.col, 'multiply', 1, fl);
     if (artImg[nm + '-hair']) drawArtTint(nm + '-hair', cx, cy, fg.hr, 'multiply', 1, fl); }
-  else personBody(cx, cy, k, step, w.col, fg);   // the son's version: arms, legs, blue trousers, a white T-shirt, and each one's skin and hair
+  else personBody(cx, cy, k, step, w.col, fg, 0, walkDir(w));   // the Chuprovs in T-shirts and jeans, everyone else in their tunic
 }
 // friendship on the map: threads from the chosen home to the families it knows, or between all close families for a while after the button in «Поселенцы»
 function drawThreads(now){
@@ -5539,24 +5542,39 @@ function drawGarland(cx, cy, time, k){
     for (let q = 1; q < 6; q++){ const [x, y] = p(q/6); ell(x, y + 1.2, 1.5, 1.5, C[(q + (x1 > 0 ? 2 : 0)) % C.length]); } }
   ctx.restore();
 }
+// which way a walker looks on screen: [1 right or -1 left, true when coming towards us (the face shows)]. A step along x goes right and down,
+// along y left and down, so the screen's x is dx - dy and its y is dx + dy
+function walkDir(w){ const dx = w.tx - w.fx, dy = w.ty - w.fy, sx = dx - dy, sy = dx + dy; return sx || sy ? [sx < 0 ? -1 : 1, sy >= 0] : null; }
 // who a walker is: the kind by age and sex (one figure a kind), and the skin and hair of their face
 function folkFig(mid){
   const P = findMember(mid), m = P && P.m;
   if (!m) return { t:'man', sk:'#e8c39e', hr:'#5a3d2b' };
   const h = Math.imul(m.id + 7, 2654435761) >>> 0, st = stage(m), fe = m.s === 'f';
   return { t: st === 0 ? (fe ? 'girl' : 'boy') : st === 2 ? (fe ? 'grandma' : 'grandpa') : (fe ? 'woman' : 'man'),
-    sk:SKIN[h % 5], hr: st === 2 ? GREY[(h >>> 3) % 2] : HAIR[(h >>> 3) % 5] };
+    sk:skinOf(m), hr: st === 2 ? GREY[(h >>> 3) % 2] : HAIR[(h >>> 3) % 5], ch: P.f.nm === CHUP ? 1 : 0 };
 }
-// the son's version: a slim figure with arms and legs, blue trousers (dark blue for the men and boys) and a white T-shirt (col is no longer used).
-// step swings the legs and, the other way, the arms; up lifts the arms (a kid playing with a fluffy)
-const PANTS = '#3f66b8', PANTS_D = '#2f4f93', PANTS_M = '#26386a', PANTS_MD = '#1b2a52', MALE_FIG = /^(boy|man|grandpa)$/, SHIRT = '#fbfaf6', SHIRT_L = '#a89d90', SHOES = '#3a3030';
-function personBody(cx, cy, k, step, col, fg, up = 0){
+// a walker as in the main game: two legs, a tunic in their own colour and a round head, here bare like the Chuprovs'; the Chuprovs are drawn by chupBody
+function personBody(cx, cy, k, step, col, fg, up = 0, dir = null){
+  if (fg && fg.ch) return chupBody(cx, cy, k, step, col, fg, up, dir);
+  ctx.strokeStyle = '#5b4434'; ctx.lineWidth = 1.1;
+  ctx.beginPath(); ctx.moveTo(cx-1, cy-3*k); ctx.lineTo(cx-1 + step*.5, cy); ctx.moveTo(cx+1, cy-3*k); ctx.lineTo(cx+1 - step*.5, cy); ctx.stroke();
+  ell(cx, cy-6*k, 3.2*k, 4.4*k, col);
+  ell(cx, cy-12.5*k, 3*k, 3*k, fg ? fg.sk : '#e8c39e');
+}
+// the son's version, for the Chuprovs only: a slim figure with arms and legs, blue trousers (dark blue for the men and boys) and a white T-shirt (col is not used).
+// step swings the legs and, the other way, the arms; up lifts the arms (a kid playing with a fluffy); dir is walkDir's [side, front], null: standing, facing us
+const PANTS = '#3f66b8', PANTS_D = '#2f4f93', PANTS_M = '#26386a', PANTS_MD = '#1b2a52', MALE_FIG = /^(boy|man|grandpa)$/, SHIRT = '#fbfaf6', SHIRT_L = '#a89d90', SHOES = '#3a3030', FACE_INK = '#3a2e2a';
+function chupBody(cx, cy, k, step, col, fg, up = 0, dir = null){
   const sk = fg ? fg.sk : '#e8c39e', male = !!fg && MALE_FIG.test(fg.t), pc = male ? PANTS_M : PANTS, pd = male ? PANTS_MD : PANTS_D, sh = cy - 9.8*k, wa = cy - 5.2*k, hip = cy - 4.4*k, ft = cy - .5*k, cap = ctx.lineCap;
   ctx.lineCap = 'round';
   // legs in blue trousers, and shoes
   const lx = cx - .95*k + step*.55, rx = cx + .95*k - step*.55;
   ctx.strokeStyle = pc; ctx.lineWidth = 1.75*k; ctx.beginPath(); ctx.moveTo(cx - .95*k, hip); ctx.lineTo(lx, ft); ctx.moveTo(cx + .95*k, hip); ctx.lineTo(rx, ft); ctx.stroke();
-  ctx.fillStyle = SHOES; for (const x of [lx, rx]){ ctx.beginPath(); ctx.ellipse(x + .5*k, cy - .25*k, 1.15*k, .6*k, 0, 0, Math.PI*2); ctx.fill(); }
+  // shoes point the way one walks, along the road's slant; standing, both toes face us, a little apart
+  ctx.fillStyle = SHOES; for (const [x, s] of [[lx, -1], [rx, 1]]){ ctx.beginPath();
+    if (dir){ const [sx, fr] = dir; ctx.ellipse(x + sx*.45*k, cy - .25*k + (fr ? .15 : -.15)*k, 1.15*k, .6*k, sx*(fr ? 1 : -1)*.46, 0, Math.PI*2); }
+    else ctx.ellipse(x + s*.3*k, cy - .1*k, .85*k, .65*k, s*.35, 0, Math.PI*2);
+    ctx.fill(); }
   ctx.fillStyle = pd; ctx.fillRect(cx - 2*k, wa, 4*k, hip - wa + .6*k);   // the trousers' top, under the shirt
   // the T-shirt: narrow shoulders down to the waist
   ctx.beginPath(); ctx.moveTo(cx - 2.3*k, sh); ctx.lineTo(cx + 2.3*k, sh); ctx.lineTo(cx + 2*k, wa + .3*k); ctx.lineTo(cx - 2*k, wa + .3*k); ctx.closePath();
@@ -5570,7 +5588,13 @@ function personBody(cx, cy, k, step, col, fg, up = 0){
     ctx.strokeStyle = SHIRT; ctx.lineWidth = 1.7*k; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(mx, my); ctx.stroke(); }
   ctx.lineCap = cap;
   // the head: bare, no hair and no outline (the son's wish)
-  const ink = INK; INK = null; ell(cx, cy-12.5*k, 3*k, 3*k, sk); INK = ink;
+  const ink = INK, hy = cy - 12.5*k; INK = null; ell(cx, hy, 3*k, 3*k, sk);
+  // a little face when one looks our way: two dark eyes, pink cheeks and a smile, turned a little to the side one walks
+  if (!dir || dir[1]){ const fx = cx + (dir ? dir[0]*.7*k : 0);
+    ctx.fillStyle = 'rgba(240,120,130,.38)'; for (const s of [-1, 1]){ ctx.beginPath(); ctx.ellipse(fx + s*1.75*k, hy + 1*k, .6*k, .4*k, 0, 0, Math.PI*2); ctx.fill(); }
+    ctx.fillStyle = FACE_INK; for (const s of [-1, 1]){ ctx.beginPath(); ctx.ellipse(fx + s*.95*k, hy - .1*k, .38*k, .5*k, 0, 0, Math.PI*2); ctx.fill(); }
+    ctx.strokeStyle = FACE_INK; ctx.lineWidth = .32*k; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(fx, hy + .55*k, .75*k, .2*Math.PI, .8*Math.PI); ctx.stroke(); ctx.lineCap = cap; }
+  INK = ink;
 }
 // a walker's hair on the placeholder, facing right: a girl a tail, a woman a bob, a grandma a bun, the men short
 function folkHair(cx, cy, k, fg, col, part = 'both'){
@@ -5787,7 +5811,7 @@ function helpLine(i){
 function helpPos(r){ const [cx, cy] = bPos(r.i); return [cx + 16, cy - 58 + Math.sin(performance.now()/1000*2.2 + r.mid)*2]; }
 function drawHelp(){
   const ink = INK; INK = null;
-  for (const r of helpRq){ const [x, y] = helpPos(r), P = findMember(r.mid), sk = P ? SKIN[(Math.imul(P.m.id + 7, 2654435761) >>> 0) % 5] : '#e8c39e';
+  for (const r of helpRq){ const [x, y] = helpPos(r), P = findMember(r.mid), sk = P ? skinOf(P.m) : '#e8c39e';
     if (hoverW && hoverW.help === r) ell(x, y, 16, 16, 'rgba(255,255,255,.5)');
     ell(x, y, 12.5, 12.5, 'rgba(255,255,255,.95)'); ctx.strokeStyle = '#f3c75b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 12.5, 0, Math.PI*2); ctx.stroke();
     ctx.strokeStyle = sk; ctx.lineCap = 'round'; ctx.lineWidth = 2.6; ctx.beginPath();
@@ -6241,7 +6265,7 @@ function dgNose(s){
 function openDig(s){
   const P = digger(s); if (!P || crBind() < 0) return;
   const nz = dgNose(s);
-  DIG = { on:true, s, mid:P.m.id, sk:skillOf(P.m), skin:SKIN[(Math.imul(P.m.id + 7, 2654435761) >>> 0) % 5], gx:DG_X0, gy:-1, px:DG_X0, py:-1, fx:DG_X0 - 1, fy:-1, prev:[DG_X0 - 1, -1],
+  DIG = { on:true, s, mid:P.m.id, sk:skillOf(P.m), skin:skinOf(P.m), gx:DG_X0, gy:-1, px:DG_X0, py:-1, fx:DG_X0 - 1, fy:-1, prev:[DG_X0 - 1, -1],
     path:[], then:null, fast:false, hit:0, hx:0, hy:0, t:0, acc:0, cam:0, pre:'', msg:'', prevSpeed:speed, nose:nz.r, pet:nz.p };
   document.querySelectorAll('.overlay').forEach(o => o.hidden = true); closeFly(); setSpeed(0);
   $('dgTitle').textContent = `Кратер «${crName(DG.k)}»`; dgCv.setAttribute('aria-label', 'Разрез под колонией: нажмите на клетку рядом с ходом');
@@ -6882,7 +6906,7 @@ const FOLK_PROP = {
 // a resident in the scene: the same skin, hair and tunic as on the face, about 18 units tall, feet at (x, y), facing right (dir -1 turns them)
 function drawFolk(m, x, y, s, dir, pose, prop, time, mo){
   const h = Math.imul(m.id + 7, 2654435761) >>> 0, st = stage(m), kid = st === 0, old = st === 2, k = s*(kid ? .74 : 1), ink = INK;
-  const sk = SKIN[h % 5], hr = old ? GREY[(h >>> 3) % 2] : HAIR[(h >>> 3) % 5], sh = TUNICS[m.id % TUNICS.length], sty = (h >>> 6) % 3;
+  const sk = skinOf(m), hr = old ? GREY[(h >>> 3) % 2] : HAIR[(h >>> 3) % 5], sh = TUNICS[m.id % TUNICS.length], sty = (h >>> 6) % 3;
   INK = null; ctx.setTransform(dpr*k*dir, 0, 0, dpr*k, dpr*x, dpr*y);
   vO(0, .3, 6, 1.7, 'rgba(60,40,20,.16)');
   const sit = pose === 'sit', wk = pose === 'walk', ph = time*8 + m.id;
@@ -6898,8 +6922,10 @@ function drawFolk(m, x, y, s, dir, pose, prop, time, mo){
   if (!kid && m.s === 'f' && sty === 0) vE(-.8, hd + 1.3, 3.7, 3.5, hr);
   vE(0, b, 3.5, 4.6, sh);
   vE(.3, hd, 3.4, 3.4, sk);
-  vH(.2, hd - .2, 3.6, 3.4, hr);
-  if (kid){ if (m.s === 'f'){ vE(-3.4, hd + .2, 1.3, 1.5, hr); vE(3.8, hd - .4, 1.1, 1.3, hr); } else vE(.8, hd - 3.6, 1.2, .9, hr); }
+  const bald = m.k === 'gg';   // the son's version: great-grandpa Валентин is bald
+  if (!bald) vH(.2, hd - .2, 3.6, 3.4, hr);
+  if (bald);
+  else if (kid){ if (m.s === 'f'){ vE(-3.4, hd + .2, 1.3, 1.5, hr); vE(3.8, hd - .4, 1.1, 1.3, hr); } else vE(.8, hd - 3.6, 1.2, .9, hr); }
   else if (m.s === 'm'){ if (sty === 1) vE(1.6, hd - 3.3, 1.6, 1, hr); else if (sty === 2) for (const [dx, dy] of [[-2.2, -2.4], [0, -3.4], [2.3, -2.7]]) vE(.3 + dx, hd + dy, 1.4, 1.3, hr); }
   else if (sty === 1) vE(-2, hd - 3.2, 1.7, 1.7, hr);
   vO(.6, hd + .4, .45, .55, '#2b2824'); vO(2.6, hd + .4, .42, .55, '#2b2824'); vO(3, hd + 1.7, .9, .5, 'rgba(233,138,138,.5)');
@@ -7461,11 +7487,14 @@ for (const id of ['sSet', 'eSet']) $(id).addEventListener('click', e => { if (e 
 for (const id of ['sCol', 'sHow', 'sSave', 'sNew']) $(id).addEventListener('click', () => setMenu());   // these open their own windows; the sound switch leaves the menu open
 if (document.addEventListener) document.addEventListener('click', e => { if (!$('setMenu').hidden && !(e.target.closest && e.target.closest('#setMenu'))) setMenu(); });
 // a face for every resident, drawn from their id: skin, hair and its colour, the craft as a hat or goggles; children smaller, elders grey
-const SKIN = ['#f3d2b8', '#e2b48e', '#c98f68', '#f6dccb', '#a8724e'], HAIR = ['#5a3d2b', '#c98a4a', '#2f2a2a', '#8c4a32', '#e0c07a'], GREY = ['#e4e0d8', '#c4beb4'];
+const SKIN = ['#f3d2b8', '#e2b48e', '#c98f68', '#f6dccb', '#a8724e'], CHUP_SKIN = SKIN[1];
+// a resident's skin: by their id, and for the Chuprovs one middle tone, neither pale nor tanned
+const skinOf = m => { const P = findMember(m.id); return P && P.f.nm === CHUP ? CHUP_SKIN : SKIN[(Math.imul(m.id + 7, 2654435761) >>> 0) % 5]; };
+const HAIR = ['#5a3d2b', '#c98a4a', '#2f2a2a', '#8c4a32', '#e0c07a'], GREY = ['#e4e0d8', '#c4beb4'];
 const FACE_TOP = 'M17 29 q1 -15 15 -15 q14 0 15 15 q-5 -7 -15 -7 q-10 0 -15 7z';
 function faceSVG(m, px){
   const h = Math.imul(m.id + 7, 2654435761) >>> 0, st = stage(m), kid = st === 0, old = st === 2, L = '#8a7a6a';
-  const sk = SKIN[h % 5], hr = old ? GREY[(h >>> 3) % 2] : HAIR[(h >>> 3) % 5], sh = TUNICS[m.id % TUNICS.length], sty = (h >>> 6) % 3;
+  const sk = skinOf(m), hr = old ? GREY[(h >>> 3) % 2] : HAIR[(h >>> 3) % 5], sh = TUNICS[m.id % TUNICS.length], sty = (h >>> 6) % 3;
   const P = (d, f, w = 1.1) => `<path d="${d}" fill="${f}" stroke="${L}" stroke-width="${w}"/>`;
   const C = (x, y, r, f, w = 1) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${f}" stroke="${L}" stroke-width="${w}"/>`;
   const E = (x, y, rx, ry, f, w = 1.1) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${f}" stroke="${L}" stroke-width="${w}"/>`;
@@ -7476,6 +7505,7 @@ function faceSVG(m, px){
   if (kid) hair = m.s === 'f' ? C(15.5, 28, 4.6, hr) + C(48.5, 28, 4.6, hr) + P(FACE_TOP, hr) : P(FACE_TOP, hr) + P('M30 15 q2 -6 7 -5 q-4 2 -4 6z', hr);
   else if (m.s === 'm') hair = [P(FACE_TOP, hr), P('M17 30 q0 -16 15 -16 q15 0 15 14 q-9 -2 -14 -8 q-6 7 -16 10z', hr), C(21, 22, 5, hr) + C(28, 18, 5.5, hr) + C(36, 18, 5.5, hr) + C(43, 22, 5, hr)][sty];
   else hair = [P('M16 34 q-1 -20 16 -20 q17 0 16 20 q-3 -11 -16 -12 q-13 1 -16 12z', hr), C(32, 11, 6, hr) + P(FACE_TOP, hr), P('M16 32 q0 -18 16 -18 q16 0 16 18 q-4 -9 -16 -10 q-12 1 -16 10z', hr)][sty];
+  if (m.k === 'gg'){ back = ''; hair = ''; }   // the son's version: great-grandpa Валентин is bald
   const A = {
     glass: Rr(18, 20, 12, 7, 3.5, '#8ecfe0') + Rr(34, 20, 12, 7, 3.5, '#8ecfe0'),
     metal: Rr(18, 20, 12, 7, 3.5, '#6c6a72') + Rr(34, 20, 12, 7, 3.5, '#6c6a72'),
