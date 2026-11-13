@@ -14,7 +14,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>#trayWrap{padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}</style>
-<script>window.LETO_SITE={v:'64dc8a05c23e',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
+<script>window.LETO_SITE={v:'bb1d08813acc',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -5563,7 +5563,7 @@ function personBody(cx, cy, k, step, col, fg, up = 0, dir = null){
 }
 // the son's version, for the Chuprovs only: a slim figure with arms and legs, blue trousers (dark blue for the men and boys) and a white T-shirt (col is not used).
 // step swings the legs and, the other way, the arms; up lifts the arms (a kid playing with a fluffy); dir is walkDir's [side, front], null: standing, facing us
-const PANTS = '#3f66b8', PANTS_D = '#2f4f93', PANTS_M = '#26386a', PANTS_MD = '#1b2a52', MALE_FIG = /^(boy|man|grandpa)$/, SHIRT = '#fbfaf6', SHIRT_L = '#a89d90', SHOES = '#3a3030', FACE_INK = '#3a2e2a';
+const PANTS = '#3f66b8', PANTS_D = '#2f4f93', PANTS_M = '#26386a', PANTS_MD = '#1b2a52', MALE_FIG = /^(boy|man|grandpa)$/, SHIRT = '#fbfaf6', SHIRT_L = '#a89d90', SHOES = '#3a3030';
 function chupBody(cx, cy, k, step, col, fg, up = 0, dir = null){
   const sk = fg ? fg.sk : '#e8c39e', male = !!fg && MALE_FIG.test(fg.t), pc = male ? PANTS_M : PANTS, pd = male ? PANTS_MD : PANTS_D, sh = cy - 9.8*k, wa = cy - 5.2*k, hip = cy - 4.4*k, ft = cy - .5*k, cap = ctx.lineCap;
   ctx.lineCap = 'round';
@@ -5587,13 +5587,8 @@ function chupBody(cx, cy, k, step, col, fg, up = 0, dir = null){
     ctx.fillStyle = sk; ctx.beginPath(); ctx.arc(hx, hy, .75*k, 0, Math.PI*2); ctx.fill();
     ctx.strokeStyle = SHIRT; ctx.lineWidth = 1.7*k; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(mx, my); ctx.stroke(); }
   ctx.lineCap = cap;
-  // the head: bare, no hair and no outline (the son's wish)
-  const ink = INK, hy = cy - 12.5*k; INK = null; ell(cx, hy, 3*k, 3*k, sk);
-  // a little face when one looks our way: two dark eyes, pink cheeks and a smile, turned a little to the side one walks
-  if (!dir || dir[1]){ const fx = cx + (dir ? dir[0]*.7*k : 0);
-    ctx.fillStyle = 'rgba(240,120,130,.38)'; for (const s of [-1, 1]){ ctx.beginPath(); ctx.ellipse(fx + s*1.75*k, hy + 1*k, .6*k, .4*k, 0, 0, Math.PI*2); ctx.fill(); }
-    ctx.fillStyle = FACE_INK; for (const s of [-1, 1]){ ctx.beginPath(); ctx.ellipse(fx + s*.95*k, hy - .1*k, .38*k, .5*k, 0, 0, Math.PI*2); ctx.fill(); }
-    ctx.strokeStyle = FACE_INK; ctx.lineWidth = .32*k; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(fx, hy + .55*k, .75*k, .2*Math.PI, .8*Math.PI); ctx.stroke(); ctx.lineCap = cap; }
+  // the head: bare, no hair, no face and no outline (the son's wish)
+  const ink = INK; INK = null; ell(cx, cy - 12.5*k, 3*k, 3*k, sk);
   INK = ink;
 }
 // a walker's hair on the placeholder, facing right: a girl a tail, a woman a bob, a grandma a bun, the men short
