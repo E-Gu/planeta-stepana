@@ -14,7 +14,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>#trayWrap{padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}</style>
-<script>window.LETO_SITE={v:'8c24aaf90623',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
+<script>window.LETO_SITE={v:'d63da224bd89',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,6 +53,7 @@ body{background:var(--void);color:var(--ink);font-family:var(--body);font-size:1
 #map{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 #map.pan{cursor:grab}
 #map.pan.over{cursor:pointer}
+#map.pan.rim{cursor:ew-resize}
 
 .top{position:absolute;top:0;left:0;right:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
   padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none;z-index:3}
@@ -1168,6 +1169,9 @@ const ice = new Uint8Array(N*N), meltAcc = new Int16Array(N*N); const MELT_T = 1
 const meltT = i => { let n = 0; for (const j of nbs(i)) if (ice[j]) n++; return MELT_T + Math.round(vari[i]*MELT_VAR) + MELT_THICK*n; };
 // the colony dome: building happens inside; it widens when the ground under it has come alive
 const DOME_C = [11, 12], DOME_MIN = 5, DOME_MAX = 22, DOME_NEED = .5; let domeT = DOME_MIN, domeR = DOME_MIN, domeProg = 0;
+// the player may pull the dome's rim in for a cosier view and let it out again: domeV is the radius shown (0 = all of it). Only the view changes:
+// building, water, air and the widening all go by domeT
+const DOME_VMIN = 1.5; let domeV = 0; const domeShow = () => domeV && !domeOpen() ? Math.max(Math.min(DOME_VMIN, domeT), Math.min(domeT, domeV)) : domeT;
 // the narrow start of the first colony: one scouts' capsule under a dome of DOME_LO, and one widening more up to DOME_MIN, where every other colony begins
 const NARROW_START = true;   // tests written for the old camp switch it off
 const DOME_LO = 3.5; let narrow = false; const domeLo = () => narrow ? DOME_LO : DOME_MIN;
@@ -1443,7 +1447,7 @@ function newGame(w){
   // the first colony lands narrow: the scouts' capsule and the roads; its ground is cleared like the full camp, so the well and the bioreactor have their places.
   // Every other colony finds the camp the scouts made ready
   let scout = false; for (const [x, y, t, l] of campTiles()){ if (narrow && t !== 'road' && (t !== 'house' || !l || scout)) continue; if (t === 'house') scout = true; put(x, y, t, l); }
-  initLife(); pets = []; motes = []; seedsOn = new Set(); mushOn = new Set(); turf = new Set(); talSeen = new Set(); lifeAt.fill(0); domeT = domeLo(); domeFit(); darkK = -1; dry.fill(0);
+  initLife(); pets = []; motes = []; seedsOn = new Set(); mushOn = new Set(); turf = new Set(); talSeen = new Set(); lifeAt.fill(0); domeT = domeLo(); domeV = 0; domeFit(); darkK = -1; dry.fill(0);
   pw = narrow ? 0 : 1; pwT = pw ? PW_FULL : 0; if (pw && !camp.pw && colIdx > 0){ camp.pw = 1; saveCamp(); } sky = { dew:0, cl:0, s:lifePct() }; orbitQ = ORBIT_Q;
   stock = Object.fromEntries(RES_ORDER.map(k => [k, 0])); Object.assign(stock, MAP().stock); if (narrow) stock.stone += NARROW_STONE;
   for (const r in hunger) hunger[r].fill(0);
@@ -2700,7 +2704,7 @@ const domeOpen = () => tier >= 5;
 const inDome = i => domeOpen() || domeD(i) <= domeT + .5;
 const RAIN_GAP = () => 150 + Math.random()*120;   // seconds between rains
 // never leave a building outside: on load the dome is at least as wide as the town
-function domeFit(){ let m = domeLo(); for (let i = 0; i < N*N; i++) if (B[i] && B[i].t !== 'starmoss' && B[i].of !== 'starmoss') m = Math.max(m, domeD(i) - .5); domeT = Math.min(DOME_MAX, Math.max(domeT, m)); domeR = domeT; }
+function domeFit(){ let m = domeLo(); for (let i = 0; i < N*N; i++) if (B[i] && B[i].t !== 'starmoss' && B[i].of !== 'starmoss') m = Math.max(m, domeD(i) - .5); domeT = Math.min(DOME_MAX, Math.max(domeT, m)); domeR = domeShow(); }
 // share of living ground (grass or meadow) under the dome; at DOME_NEED the dome widens
 function domeShare(){ let n = 0, a = 0; for (let i = 0; i < N*N; i++){ if (water[i] || rock[i] || ice[i] || domeD(i) > domeT || crAt(i) >= 0) continue; n++; if (life[i] >= 2) a++; } return n ? a / n : 0; }
 // the land under the dome, how much of it is grass or meadow, and how much must be for the dome to widen
@@ -5277,7 +5281,7 @@ function rimRedraw(cx, cy, r, time, outM, visible){
   INK = INK_COL;
   for (let s = 0; s <= 2*N-2; s++) for (let x = Math.max(0, s-N+1); x <= Math.min(s, N-1); x++){
     const y = s - x, i = idx(x, y), [tx, ty] = wpos(x, y);
-    if (ty > cy || !inDome(i) || domeD(i) < r - 2.5 || !visible(tx, ty)) continue;
+    if (ty > cy || !inDome(i) || domeD(i) < r - 2.5 || domeD(i) > r + .5 || !visible(tx, ty)) continue;
     const b = B[i];
     if (rock[i]) rocks(tx, ty, i);
     else if (b && (b.t === 'part' || bSz(b) > 1)){ const a = anc(i); if (done.has(a) || !B[a]) continue; done.add(a);
@@ -5435,9 +5439,9 @@ function render(time){
   { const A = Math.max(darkK, .8*eveK); if (darkK > .01){ const [dx, dy] = wpos(DOME_C[0], DOME_C[1]); darkOutside(dx, dy, domeR); if (!domeOpen()) rimRedraw(dx, dy, domeR, time, outM, visible); } if (A > .01) nightSky(time, A); }
   if (darkK > .01){
     // the cursor and the selection stay bright outside, where groves can still be planted
-    if (hover >= 0 && tool !== 'select' && !inDome(hover)){ const [cx, cy] = wpos(hover % N, (hover / N) | 0); const bad = !preview || preview.invalid || (preview.miss && preview.miss.length);
+    if (hover >= 0 && tool !== 'select' && domeD(hover) > domeR + .5){ const [cx, cy] = wpos(hover % N, (hover / N) | 0); const bad = !preview || preview.invalid || (preview.miss && preview.miss.length);
       poly(dia(cx, cy, 1), bad ? 'rgba(220,80,60,.3)' : 'rgba(255,255,255,.16)', bad ? 'rgba(220,80,60,.95)' : 'rgba(255,255,255,.9)', 1.5); }
-    if (selected >= 0 && !inDome(selected)){ const [cx, cy] = wpos(selected % N, (selected / N) | 0); poly(dia(cx, cy, 1), null, '#fff', 2); }
+    if (selected >= 0 && domeD(selected) > domeR + .5){ const [cx, cy] = wpos(selected % N, (selected / N) | 0); poly(dia(cx, cy, 1), null, '#fff', 2); }
   }
   if (!domeOpen()){ const [dx, dy] = wpos(DOME_C[0], DOME_C[1]); drawDome(dx, dy, domeR + DOME_PAD); }
   if (rain.t > 0) drawRain(time);
@@ -7882,8 +7886,10 @@ function renderInfo(){
         : `<div class="mood"><div class="bar"><i style="width:${Math.max(3, Math.round(100*Math.min(1, domeProg/DOME_NEED)))}%"></i></div><span><b>${domeCount().a}</b> из ${domeCount().need} клеток</span></div>
           <p>${domeLine(domeCount())} Сажайте деревья, разбивайте клумбы и пруды под куполом.</p>${(dn => dn ? `<p class="warn">${dn} ${plural(dn, 'клумба или пруд вянет без воды и не оживляет', 'клумбы или пруда вянут без воды и не оживляют', 'клумб или прудов вянут без воды и не оживляют')} землю вокруг. Им нужна вода в баках.</p>${waterAdviceP()}` : '')(B.filter((b, i) => b && (b.t === 'garden' || b.t === 'fountain') && dry[i] >= DRY_T).length)}
           <div class="kv"><span>Радиус сейчас</span><span>${fmt1(domeT)}</span></div><div class="kv"><span>После расширения</span><span>${fmt1(Math.min(DOME_MAX, domeT + domeStep()))}</span></div>`)
-      + `<div class="kv"><span>Воздух под куполом</span><span>дышат ${air.pop} из ${air.cap}</span></div>
-      <button class="x" type="button" data-close aria-label="Закрыть">×</button>`;
+      + `<div class="kv"><span>Воздух под куполом</span><span>дышат ${air.pop} из ${air.cap}</span></div>`
+      + (domeOpen() ? '' : `<p class="sub">Край купола можно потянуть в «Осмотре»: купол станет на вид меньше и уютнее. Строить и жить это не мешает.</p>`
+        + (domeV ? `<button class="more" type="button" data-domefull>Открыть весь купол</button>` : ''))
+      + `<button class="x" type="button" data-close aria-label="Закрыть">×</button>`;
   } else if (!welcomeClosed){
     html = colIdx ? `<h2>${COL().name}</h2><p class="sub">${COL().desc} Площадку подготовили разведчики: две семьи уже живут в капсулах, челнок с третьей сядет примерно через две минуты.</p>
       <p>${phoneUI() ? 'Письмо с Земли открывается кнопкой ✉ слева.' : 'Письмо с Земли лежит слева.'} Цель этой колонии — ступень «${TIERS[COL().goal].name}».</p>
@@ -7897,6 +7903,7 @@ function renderInfo(){
 }
 $('info').addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
+  if (t.matches('[data-domefull]')){ domeV = 0; renderInfo(); return; }
   if (t.matches('[data-close]')){ selected = -1; selW = null; selPet = null; follow = false; welcomeClosed = true; domeCard = false; renderInfo(); }
   else if (t.matches('[data-more]')){ toolMore = !toolMore; renderInfo(); }
   else if (t.matches('[data-cmore]')){ cardMore = !cardMore; renderInfo(); }
@@ -9223,6 +9230,9 @@ function ptrPlace(i, fresh){
       return false; } }
   return tryPlace(i);
 }
+// the dome's ground rim under the pointer: its radius there in tiles, or null when the pointer is not on the rim
+function rimR(sx, sy){ const [dx, dy] = wpos(DOME_C[0], DOME_C[1]), wx = (sx - cam.x)/cam.z - dx, wy = (sy - cam.y)/cam.z - dy; return Math.hypot(wx, 2*wy)/45.25 - DOME_PAD; }
+function rimAt(sx, sy){ if (domeOpen() || tool !== 'select') return null; const r = rimR(sx, sy); return Math.abs(r - domeR)*45.25*cam.z <= (isTouch ? 24 : 14) ? r : null; }
 cv.addEventListener('pointerdown', e => {
   if (wakeQ && wakeQ.ph !== 'wait'){ wakeEnd(); return; }   // a tap skips the waking scene
   cv.setPointerCapture(e.pointerId); closeFly();
@@ -9236,7 +9246,9 @@ cv.addEventListener('pointerdown', e => {
   if (ptrs.size > 2) return;
   const tile = pick(e.offsetX, e.offsetY);
   if (e.button === 1 || e.button === 2 || tool === 'select'){
-    drag = { mode:'pan', sx:e.offsetX, sy:e.offsetY, cx:cam.x, cy:cam.y, moved:false, tile, btn:e.button, wk: tool === 'select' ? walkerAt(e.offsetX, e.offsetY) : null, pal: tool === 'select' && e.button === 0 ? palAtScr(e.offsetX, e.offsetY) : -1, lx:e.offsetX, ly:e.offsetY }; return;
+    drag = { mode:'pan', sx:e.offsetX, sy:e.offsetY, cx:cam.x, cy:cam.y, moved:false, tile, btn:e.button, wk: tool === 'select' ? walkerAt(e.offsetX, e.offsetY) : null, pal: tool === 'select' && e.button === 0 ? palAtScr(e.offsetX, e.offsetY) : -1, lx:e.offsetX, ly:e.offsetY };
+    if (drag.pal < 0 && e.button === 0){ const r = rimAt(e.offsetX, e.offsetY); if (r !== null){ drag.rim = r; drag.r0 = domeR; } }
+    return;
   }
   if (isTouch && !TYPES[tool].paint){ drag = { mode:'tap', sx:e.offsetX, sy:e.offsetY, cx:cam.x, cy:cam.y, tile, moved:false }; return; }
   if (isTouch){ drag = { mode:'touchpaint', sx:e.offsetX, sy:e.offsetY, last:tile, started:false }; return; }
@@ -9246,6 +9258,7 @@ cv.addEventListener('pointerdown', e => {
 cv.addEventListener('pointermove', e => {
   if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, { x:e.offsetX, y:e.offsetY });
   if (e.pointerType === 'mouse'){ const pm = mouseAt; hover = pick(e.offsetX, e.offsetY); mouseAt = [e.offsetX, e.offsetY];
+    if (!drag) cv.classList.toggle('rim', rimAt(e.offsetX, e.offsetY) !== null);
     if (pm && !drag && pals.size){ const k = palAtScr(e.offsetX, e.offsetY); if (k >= 0) palStroke(k, Math.hypot(e.offsetX - pm[0], e.offsetY - pm[1])); } }
   if (!drag){ updateTip(); return; }
   if (drag.mode === 'pinch' && ptrs.size >= 2){
@@ -9254,6 +9267,9 @@ cv.addEventListener('pointermove', e => {
     zoomAt(mx, my, drag.z0 * d / drag.d0); updateTip(); return;
   }
   const mv = drag.sx !== undefined ? Math.hypot(e.offsetX - drag.sx, e.offsetY - drag.sy) : 0;
+  // pulled by its rim, the dome looks smaller or bigger; never wider than it really is
+  if (drag.mode === 'pan' && drag.rim !== undefined && (drag.moved || mv > 6)){ drag.moved = true;
+    domeV = Math.max(Math.min(DOME_VMIN, domeT), Math.min(domeT, drag.r0 + rimR(e.offsetX, e.offsetY) - drag.rim)); domeR = domeV; updateTip(); return; }
   // a finger or the mouse held on a home fluffy strokes it; once it slides far off, the map pans as usual
   if (drag.mode === 'pan' && drag.pal >= 0){
     if (palAtScr(e.offsetX, e.offsetY) !== drag.pal && mv > 30){ drag.pal = -1; drag.sx = e.offsetX; drag.sy = e.offsetY; drag.cx = cam.x; drag.cy = cam.y; }
@@ -9274,6 +9290,7 @@ function endPtr(e){
   ptrs.delete(e.pointerId);
   if (!drag) return;
   if (drag.mode === 'pinch'){ if (ptrs.size === 0) drag = null; return; }
+  if (drag.rim !== undefined && drag.moved){ if (domeV >= domeT - .3) domeV = 0; if (domeCard) renderInfo(); }   // let out to its edge, it follows the dome again as it widens
   if (drag.mode === 'pan' && !drag.moved && tool === 'select' && drag.btn === 0){
     const sd = seedAt(drag.sx, drag.sy);
     if (sd >= 0){ pickSeed(sd); drag = null; updateTip(); return; }
@@ -9348,7 +9365,7 @@ try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', read
 new MutationObserver(readTheme).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme','class','style'] });
 
 /* ---------- save / load ---------- */
-function serialize(){ return { v:5, rw:1, lk:LIFE_K, hv:1, hf: hallFree ? 1 : 0, ns: narrow ? 1 : 0, pa: [pw, Math.round(Math.min(pwT, PW_FULL))], ac: [accPairs(meltAcc), accPairs(lifeAcc)], sk: [sky.dew, sky.cl, sky.s], oq: orbitQ, wq: wakeQ ? [wakeQ.at, wakeQ.k] : 0, B: B.map(c => c && c.t !== 'part' ? [c.t, c.lvl, Math.round((c.cut||0)*10)/10, c.f || 0, (c.up || c.dn) ? [Math.round(c.up || 0), Math.round(c.dn || 0)] : 0, c.pet ? [c.pet.k, Math.round(c.pt || 0), c.pet.n || '', c.pet.tr || 0, c.pet.x || 0, Math.round(c.pg || 0), c.pet.w ? 1 : 0] : 0, c.t === 'site' ? [c.of, Math.round(c.p || 0), c.ord || 0] : 0, c.found || 0, c.fr ? 1 : 0] : 0), tree: Array.from(tree), tn: Array.from(tree, (v, i) => v && tnat[i] ? i : -1).filter(i => i >= 0), life: Array.from(life), water: Array.from(water), ice: Array.from(ice), dome: domeT, pets: pets.map(w => [w.fx, w.fy, w.k, w.n || '', w.tr || 0, w.x || 0]), sd: [...seedsOn], ms: [...mushOn], tf: [...turf], gw: [...gwNew], ts: [...talSeen], nw: news, stock:{ ...stock }, ore: Array.from(ore, v => Math.round(v)), rs: rain.seen ? 1 : 0, sh: Math.round(shuttle), sr: [...seenRes], tier, disc:[...discovered], villa: seenVilla, sfr: seenFrame, gv: 1, wv, cam:{ ...cam }, speed: EX.on ? EX.prevSpeed : HELP.on ? HELP.prevSpeed : DIG.on ? DIG.prevSpeed : speed, dg: DG ? dgSave() : 0, cr: CR ? crSave() : 0, welcomeClosed, uid, chron, wd: wishesDone, gu: guild, mp: mpInv, lt: { i:lt.i, f:lt.from, d:lt.d, s:lt.s, c:lt.c ? 1 : 0, l:ledgerSeen ? 1 : 0 }, col: colIdx, fin, rq: { a: rq.a, cd: Math.round(rq.cd), d: rq.done, n: rq.no, g: rq.g }, dr: dreams.map(d => ({ ...d })), mz: { L: mosList.map(z => [z.n, z.p, z.t, z.who, z.f ? 1 : 0, z.s || 1]), at: [...mzAt], nx: mzNext, sel: mzSel } }; }
+function serialize(){ return { v:5, rw:1, lk:LIFE_K, hv:1, hf: hallFree ? 1 : 0, ns: narrow ? 1 : 0, pa: [pw, Math.round(Math.min(pwT, PW_FULL))], ac: [accPairs(meltAcc), accPairs(lifeAcc)], sk: [sky.dew, sky.cl, sky.s], oq: orbitQ, wq: wakeQ ? [wakeQ.at, wakeQ.k] : 0, B: B.map(c => c && c.t !== 'part' ? [c.t, c.lvl, Math.round((c.cut||0)*10)/10, c.f || 0, (c.up || c.dn) ? [Math.round(c.up || 0), Math.round(c.dn || 0)] : 0, c.pet ? [c.pet.k, Math.round(c.pt || 0), c.pet.n || '', c.pet.tr || 0, c.pet.x || 0, Math.round(c.pg || 0), c.pet.w ? 1 : 0] : 0, c.t === 'site' ? [c.of, Math.round(c.p || 0), c.ord || 0] : 0, c.found || 0, c.fr ? 1 : 0] : 0), tree: Array.from(tree), tn: Array.from(tree, (v, i) => v && tnat[i] ? i : -1).filter(i => i >= 0), life: Array.from(life), water: Array.from(water), ice: Array.from(ice), dome: domeT, dv: domeV ? Math.round(domeV*100)/100 : 0, pets: pets.map(w => [w.fx, w.fy, w.k, w.n || '', w.tr || 0, w.x || 0]), sd: [...seedsOn], ms: [...mushOn], tf: [...turf], gw: [...gwNew], ts: [...talSeen], nw: news, stock:{ ...stock }, ore: Array.from(ore, v => Math.round(v)), rs: rain.seen ? 1 : 0, sh: Math.round(shuttle), sr: [...seenRes], tier, disc:[...discovered], villa: seenVilla, sfr: seenFrame, gv: 1, wv, cam:{ ...cam }, speed: EX.on ? EX.prevSpeed : HELP.on ? HELP.prevSpeed : DIG.on ? DIG.prevSpeed : speed, dg: DG ? dgSave() : 0, cr: CR ? crSave() : 0, welcomeClosed, uid, chron, wd: wishesDone, gu: guild, mp: mpInv, lt: { i:lt.i, f:lt.from, d:lt.d, s:lt.s, c:lt.c ? 1 : 0, l:ledgerSeen ? 1 : 0 }, col: colIdx, fin, rq: { a: rq.a, cd: Math.round(rq.cd), d: rq.done, n: rq.no, g: rq.g }, dr: dreams.map(d => ({ ...d })), mz: { L: mosList.map(z => [z.n, z.p, z.t, z.who, z.f ? 1 : 0, z.s || 1]), at: [...mzAt], nx: mzNext, sel: mzSel } }; }
 // seconds already counted toward a thaw or a step of living ground, as [tile, seconds, tile, seconds, …]
 const accPairs = a => { const o = []; for (let i = 0; i < a.length; i++) if (a[i]) o.push(i, a[i]); return o; };
 function accSet(a, o, fit){ if (!Array.isArray(o)) return; for (let k = 0; k + 1 < o.length && k < 2*N*N; k += 2){ const i = +o[k], v = Math.round(+o[k + 1]); if (Number.isInteger(i) && i >= 0 && i < N*N && Number.isFinite(v) && Math.abs(v) < 30000 && fit(i)) a[i] = v; } }
@@ -9433,7 +9450,7 @@ function load(d){
   for (const b of B) if (b && b.f && b.f.fs !== undefined){ const o = b.f.fs, fs = {};   // friendships: ids to points, nothing else
     if (o && typeof o === 'object' && !Array.isArray(o)) for (const k in o){ const v = +o[k]; if (/^\d+$/.test(k) && v > 0) fs[k] = Math.min(FF_CAP, v); }
     b.f.fs = fs; }
-  domeT = Math.max(domeLo(), Math.min(DOME_MAX, +d.dome || domeLo())); domeFit();
+  domeV = Math.max(0, Math.min(DOME_MAX, +d.dv || 0)); domeT = Math.max(domeLo(), Math.min(DOME_MAX, +d.dome || domeLo())); domeFit();
   resize();
   if (d.cam) cam = { ...d.cam }; else centerCam(DOME_C[0], DOME_C[1] - 1);
   setSpeed(d.speed ?? .5);
@@ -9993,7 +10010,7 @@ function frame(nowMs){
   if (speed > 0){ acc += dt*speed; while (acc >= 1){ acc -= 1; tick(); } updateWalkers(dt*speed); updatePets(dt*speed); }
   updatePals(dt, speed > 0 ? dt*speed : 0);
   followCam(dt); wakeStep(dt);
-  updateMotes(dt); eveK = eveAt(eveT + acc); domeR += (domeT - domeR) * Math.min(1, dt*.7); if (darkK >= 0) darkK += (darkTarget() - darkK) * Math.min(1, dt*.4);
+  updateMotes(dt); eveK = eveAt(eveT + acc); domeR += (domeShow() - domeR) * Math.min(1, dt*.7); if (darkK >= 0) darkK += (darkTarget() - darkK) * Math.min(1, dt*.4);
   render(nowMs/1000);
   thumbAcc += dt; if (thumbAcc > .15){ thumbAcc = 0; drawThumbs(nowMs/1000); }
   if (selW && vignCv && vignCv.isConnected) drawVign(nowMs/1000);
