@@ -1,2 +1,2 @@
-// The son's version: no drawings, the game draws everything itself
-window.LETO_ART = [];
+// The son's version: only the author's ground clumps, the game draws the rest itself
+window.LETO_ART = ['clump-grass-1', 'clump-grass-2', 'clump-grass-3', 'clump-grass-4', 'clump-grass-5', 'clump-grass-6', 'clump-moss-1', 'clump-moss-2', 'clump-moss-3', 'clump-moss-4', 'clump-moss-5', 'clump-moss-6', 'clump-meadow-1', 'clump-meadow-2', 'clump-meadow-3', 'clump-meadow-4', 'clump-meadow-5', 'clump-meadow-6'];
