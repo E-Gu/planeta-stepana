@@ -14,7 +14,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>#trayWrap{padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}</style>
-<script>window.LETO_SITE={v:'3583dc66627f',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
+<script>window.LETO_SITE={v:'b40736073c73',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1175,7 +1175,14 @@ const meltT = i => { let n = 0; for (const j of nbs(i)) if (ice[j]) n++; return 
 const DOME_C = [11, 12], DOME_MIN = 5, DOME_MAX = 22, DOME_NEED = .5; let domeT = DOME_MIN, domeR = DOME_MIN, domeProg = 0;
 // the player may pull the dome's rim in for a cosier view and let it out again: domeV is the radius shown (0 = all of it). Only the view changes:
 // building, water, air and the widening all go by domeT
-const DOME_VMIN = 1.5; let domeV = 0; const domeShow = () => domeV && !domeOpen() ? Math.max(Math.min(DOME_VMIN, domeT), Math.min(domeT, domeV)) : domeT;
+// the son's version: the dome's middle walks from the landing camp toward the middle of the map as the dome widens, and stands right in it
+// at DOME_MAX, so the widest dome covers every corner. A widening of 2.5 tiles moves the middle well under that, so the new dome always holds the old one
+const MAP_C = (N - 1)/2; let domeCV = [DOME_C[0], DOME_C[1]];   // domeCV: where the glass is drawn, following DOME_C softly
+function domeAim(){ const M = MAP(), k = Math.max(0, Math.min(1, (domeT - DOME_MIN)/(DOME_MAX - DOME_MIN)));
+  DOME_C[0] = M.dome[0] + (MAP_C - M.dome[0])*k; DOME_C[1] = M.dome[1] + (MAP_C - M.dome[1])*k; }
+// the glass is never drawn wider than what reaches the map's far corners from its middle, so the widest dome hangs over the edge as little as it can
+const domeSeen = () => Math.hypot(MAP_C + .5, MAP_C + .5) - DOME_PAD;
+const DOME_VMIN = 1.5; let domeV = 0; const domeShow = () => Math.min(domeSeen(), domeV && !domeOpen() ? Math.max(Math.min(DOME_VMIN, domeT), Math.min(domeT, domeV)) : domeT);
 // the narrow start of the first colony: one scouts' capsule under a dome of DOME_LO, and one widening more up to DOME_MIN, where every other colony begins
 const NARROW_START = true;   // tests written for the old camp switch it off
 const DOME_LO = 3.5; let narrow = false; const domeLo = () => narrow ? DOME_LO : DOME_MIN;
@@ -2709,7 +2716,12 @@ const domeOpen = () => tier >= 5;
 const inDome = i => domeOpen() || domeD(i) <= domeT + .5;
 const RAIN_GAP = () => 150 + Math.random()*120;   // seconds between rains
 // never leave a building outside: on load the dome is at least as wide as the town
-function domeFit(){ let m = domeLo(); for (let i = 0; i < N*N; i++) if (B[i] && B[i].t !== 'starmoss' && B[i].of !== 'starmoss') m = Math.max(m, domeD(i) - .5); domeT = Math.min(DOME_MAX, Math.max(domeT, m)); domeR = domeShow(); }
+// the dome holds every building and every Earth tree (those are planted only under the dome). A wider dome stands nearer the middle of the map,
+// so it may let go of what the old one held on its far side: aim, widen to the farthest, and aim again until nothing is left outside
+function domeFit(){ for (let pass = 0; pass < 60; pass++){ domeAim(); let m = domeLo();
+    for (let i = 0; i < N*N; i++) if ((B[i] && B[i].t !== 'starmoss' && B[i].of !== 'starmoss') || (tree[i] && !tnat[i])) m = Math.max(m, domeD(i) - .5);
+    if (m <= domeT || domeT >= DOME_MAX) break; domeT = Math.min(DOME_MAX, m + 1e-3); }
+  domeAim(); domeR = domeShow(); domeCV = [DOME_C[0], DOME_C[1]]; }
 // share of living ground (grass or meadow) under the dome; at DOME_NEED the dome widens
 function domeShare(){ let n = 0, a = 0; for (let i = 0; i < N*N; i++){ if (water[i] || rock[i] || ice[i] || domeD(i) > domeT || crAt(i) >= 0) continue; n++; if (life[i] >= 2) a++; } return n ? a / n : 0; }
 // the land under the dome, how much of it is grass or meadow, and how much must be for the dome to widen
@@ -2726,7 +2738,7 @@ function gwWake(r0){
 function domeTick(){
   domeProg = domeShare();
   if (domeOpen() || domeT >= DOME_MAX) return;
-  if (domeProg >= DOME_NEED){ const r0 = domeT; domeT = Math.min(DOME_MAX, domeT + domeStep()); domeProg = domeShare(); chronicle('Колония раздвинула купол.');
+  if (domeProg >= DOME_NEED){ const r0 = domeT; domeT = Math.min(DOME_MAX, domeT + domeStep()); domeAim(); domeProg = domeShare(); chronicle('Колония раздвинула купол.');
     let grey = 0; for (let i = 0; i < N*N; i++) if (rock[i] === 1 && ore[i] > 0 && domeD(i) > r0 && domeD(i) <= domeT) grey++;
     const bub = gwWake(r0);
     toast('Купол расширен', 'Земля под куполом ожила, и колония раздвинула его. Теперь можно строить дальше от центра, а шкала на куполе начинает новый круг.' + (grey ? ' Под новым краем купола открылась серая скала: поставьте рядом каменоломню.' : '')
@@ -2893,7 +2905,7 @@ function petWake(){
 }
 // where the ball lies: grass by the shaft, on a free tile beside a road so the neighbours can walk up
 function wakeSpot(){
-  const s = shaftAt(), at = s >= 0 ? s : idx(DOME_C[0], DOME_C[1]); let best = -1, bd = 1e9;
+  const s = shaftAt(), at = s >= 0 ? s : idx(Math.round(DOME_C[0]), Math.round(DOME_C[1])); let best = -1, bd = 1e9;
   for (let j = 0; j < N*N; j++){ if (water[j] || rock[j] || ice[j] || (B[j] && B[j].t !== 'road') || life[j] < 1 || !inDome(j)) continue;
     const d = Math.hypot(j % N - at % N, ((j / N) | 0) - ((at / N) | 0)) - (life[j] >= 2 ? 1.5 : 0) + (B[j] ? 6 : roadsBy(j).length ? 0 : 4); if (d < bd){ bd = d; best = j; } }
   return best >= 0 ? best : at;
@@ -5444,14 +5456,14 @@ function render(time){
   if (eveK > .01) eveVeil();
   glowQ = [];
   if (darkK < 0) darkK = darkTarget();
-  { const A = Math.max(darkK, .8*eveK); if (darkK > .01){ const [dx, dy] = wpos(DOME_C[0], DOME_C[1]); darkOutside(dx, dy, domeR); if (!domeOpen()) rimRedraw(dx, dy, domeR, time, outM, visible); } if (A > .01) nightSky(time, A); }
+  { const A = Math.max(darkK, .8*eveK); if (darkK > .01){ const [dx, dy] = wpos(domeCV[0], domeCV[1]); darkOutside(dx, dy, domeR); if (!domeOpen()) rimRedraw(dx, dy, domeR, time, outM, visible); } if (A > .01) nightSky(time, A); }
   if (darkK > .01){
     // the cursor and the selection stay bright outside, where groves can still be planted
     if (hover >= 0 && tool !== 'select' && domeD(hover) > domeR + .5){ const [cx, cy] = wpos(hover % N, (hover / N) | 0); const bad = !preview || preview.invalid || (preview.miss && preview.miss.length);
       poly(dia(cx, cy, 1), bad ? 'rgba(220,80,60,.3)' : 'rgba(255,255,255,.16)', bad ? 'rgba(220,80,60,.95)' : 'rgba(255,255,255,.9)', 1.5); }
     if (selected >= 0 && domeD(selected) > domeR + .5){ const [cx, cy] = wpos(selected % N, (selected / N) | 0); poly(dia(cx, cy, 1), null, '#fff', 2); }
   }
-  if (!domeOpen()){ const [dx, dy] = wpos(DOME_C[0], DOME_C[1]); drawDome(dx, dy, domeR + DOME_PAD); }
+  if (!domeOpen()){ const [dx, dy] = wpos(domeCV[0], domeCV[1]); drawDome(dx, dy, domeR + DOME_PAD); }
   if (rain.t > 0) drawRain(time);
   for (const m of motes){ const k = m.t/m.life; ctx.globalAlpha = (k < .2 ? k/.2 : 1 - (k - .2)/.8)*.85; const mx = m.x + Math.sin(m.t*1.5 + m.s)*4, my = m.y - k*36; if (artImg['fx-mote']) drawArt('fx-mote', mx, my); else ell(mx, my, 1.7, 1.7, '#eafff0'); } ctx.globalAlpha = 1;
   if (R) for (const [i] of R.member){
@@ -7118,7 +7130,7 @@ function drawDome(cx, cy, r){
 }
 // rain: while the dome is closed it falls only outside the glass and runs down the dome into the tanks; under the open sky it falls on the whole city
 function drawRain(time){
-  const shut = !domeOpen(), [dx, dy] = wpos(DOME_C[0], DOME_C[1]), r = domeR + DOME_PAD;
+  const shut = !domeOpen(), [dx, dy] = wpos(domeCV[0], domeCV[1]), r = domeR + DOME_PAD;
   ctx.save();
   if (shut){ ctx.beginPath(); domePath(dx, dy, r); ctx.setTransform(1,0,0,1,0,0); ctx.rect(0, 0, cv.width, cv.height); ctx.clip('evenodd'); }
   else ctx.setTransform(1,0,0,1,0,0);
@@ -9261,7 +9273,7 @@ function ptrPlace(i, fresh){
   return tryPlace(i);
 }
 // the dome's ground rim under the pointer: its radius there in tiles, or null when the pointer is not on the rim
-function rimR(sx, sy){ const [dx, dy] = wpos(DOME_C[0], DOME_C[1]), wx = (sx - cam.x)/cam.z - dx, wy = (sy - cam.y)/cam.z - dy; return Math.hypot(wx, 2*wy)/45.25 - DOME_PAD; }
+function rimR(sx, sy){ const [dx, dy] = wpos(domeCV[0], domeCV[1]), wx = (sx - cam.x)/cam.z - dx, wy = (sy - cam.y)/cam.z - dy; return Math.hypot(wx, 2*wy)/45.25 - DOME_PAD; }
 function rimAt(sx, sy){ if (domeOpen() || tool !== 'select') return null; const r = rimR(sx, sy); return Math.abs(r - domeR)*45.25*cam.z <= (isTouch ? 24 : 14) ? r : null; }
 cv.addEventListener('pointerdown', e => {
   if (wakeQ && wakeQ.ph !== 'wait'){ wakeEnd(); return; }   // a tap skips the waking scene
@@ -9299,7 +9311,7 @@ cv.addEventListener('pointermove', e => {
   const mv = drag.sx !== undefined ? Math.hypot(e.offsetX - drag.sx, e.offsetY - drag.sy) : 0;
   // pulled by its rim, the dome looks smaller or bigger; never wider than it really is
   if (drag.mode === 'pan' && drag.rim !== undefined && (drag.moved || mv > 6)){ drag.moved = true;
-    domeV = Math.max(Math.min(DOME_VMIN, domeT), Math.min(domeT, drag.r0 + rimR(e.offsetX, e.offsetY) - drag.rim)); domeR = domeV; updateTip(); return; }
+    domeV = Math.max(Math.min(DOME_VMIN, domeT), Math.min(domeT, drag.r0 + rimR(e.offsetX, e.offsetY) - drag.rim)); domeR = domeShow(); updateTip(); return; }
   // a finger or the mouse held on a home fluffy strokes it; once it slides far off, the map pans as usual
   if (drag.mode === 'pan' && drag.pal >= 0){
     if (palAtScr(e.offsetX, e.offsetY) !== drag.pal && mv > 30){ drag.pal = -1; drag.sx = e.offsetX; drag.sy = e.offsetY; drag.cx = cam.x; drag.cy = cam.y; }
@@ -10040,7 +10052,7 @@ function frame(nowMs){
   if (speed > 0){ acc += dt*speed; while (acc >= 1){ acc -= 1; tick(); } updateWalkers(dt*speed); updatePets(dt*speed); }
   updatePals(dt, speed > 0 ? dt*speed : 0);
   followCam(dt); wakeStep(dt);
-  updateMotes(dt); eveK = eveAt(eveT + acc); domeR += (domeShow() - domeR) * Math.min(1, dt*.7); if (darkK >= 0) darkK += (darkTarget() - darkK) * Math.min(1, dt*.4);
+  updateMotes(dt); eveK = eveAt(eveT + acc); { const q = Math.min(1, dt*.7); domeR += (domeShow() - domeR)*q; domeCV[0] += (DOME_C[0] - domeCV[0])*q; domeCV[1] += (DOME_C[1] - domeCV[1])*q; } if (darkK >= 0) darkK += (darkTarget() - darkK) * Math.min(1, dt*.4);
   render(nowMs/1000);
   thumbAcc += dt; if (thumbAcc > .15){ thumbAcc = 0; drawThumbs(nowMs/1000); }
   if (selW && vignCv && vignCv.isConnected) drawVign(nowMs/1000);

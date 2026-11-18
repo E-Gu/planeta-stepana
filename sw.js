@@ -1,7 +1,7 @@
 // «Первое лето» on its own site: keeps the game on the device, so it opens without the network, and takes a new version when there is one.
 // python3 build.py --site fills in VERSION (a hash of everything the site holds) and FILES; a new build is a new sw.js, so the browser installs it,
 // it puts the whole new game aside, takes over and lets the old copy go. Saves are not here: they live in the page's own storage, which this never touches.
-const VERSION = '3583dc66627f';
+const VERSION = 'b40736073c73';
 const FILES = ["./", "index.html", "apple-touch-icon.png", "art/art.js", "art/clump-grass-1.png", "art/clump-grass-2.png", "art/clump-grass-3.png", "art/clump-grass-4.png", "art/clump-grass-5.png", "art/clump-grass-6.png", "art/clump-meadow-1.png", "art/clump-meadow-2.png", "art/clump-meadow-3.png", "art/clump-meadow-4.png", "art/clump-meadow-5.png", "art/clump-meadow-6.png", "art/clump-moss-1.png", "art/clump-moss-2.png", "art/clump-moss-3.png", "art/clump-moss-4.png", "art/clump-moss-5.png", "art/clump-moss-6.png", "icon-192.png", "icon-512.png", "manifest.webmanifest"];
 const CACHE = 'leto-' + VERSION;
 const FRESH = /(^|\/)(index\.html|art\/art\.js)?$/;   // the page and the list of drawings: asked from the network first, so an online start gets the new version at once
