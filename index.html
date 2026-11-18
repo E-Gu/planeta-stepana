@@ -14,7 +14,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>#trayWrap{padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}</style>
-<script>window.LETO_SITE={v:'98822af08249',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
+<script>window.LETO_SITE={v:'3583dc66627f',sb:{u:'https://gskvbbsjvowqtohjbrjs.supabase.co',k:'sb_publishable_aUUYJy9O6bunc06BmI313g_T6uQNPO7'}};if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -909,17 +909,21 @@ const RECIPE = {
   garden:     { in:{ water:1 }, air:3 },
   fountain:   { in:{ water:2 } }
 };
+// the son's version, an easy colony (the author, 18.11: «сделай так, чтобы ему стало легко»): every workshop, well and pump makes twice as much,
+// a building needs half the hands, people eat half as much algae, greens, bread and berries and drink half as much water,
+// everything that gives air gives twice as much, and every family is 20 points happier
+const EASY = { out:2, hands:.5, eat:.5, drink:.5, air:2, mood:20 };
 // per person per minute, and the house level from which a family needs it
 const EAT = { algae:.2, greens:.15, bread:.1, berries:.1 };
 // water per person per minute by house level: the richer the house, the more it uses (baths, a veranda, a garden)
-const DRINK = [0, .3, .3, .35, .4, .45];
+const DRINK = [0, .3, .3, .35, .4, .45].map(v => v*EASY.drink);   // the son's version: half
 // furnaces burn air: how many residents' worth each one takes while it works
 const FURNACE = { glassworks:3, smelter:3, bakery:2 };
 const AIR_DOME = 10, RAIN = 24, RAIN_LIFE = 20, DRY_T = 15, ORE0 = 240;   // the first rain comes at RAIN_LIFE % living ground at the earliest, and never before the clouds (skyAt)
 const ROCK_NAME = [null, 'Серая скала', 'Скала с кварцем', 'Рыжий железняк'];
 const ORE_OF = { quarry:1, glassworks:2, smelter:3 };
 // beauty a house needs for each level (index = level): a dome house 2, a veranda 5, a manor 9
-const BEAUTY_NEED = [0, 0, 0, 2, 5, 9];
+const BEAUTY_NEED = [0, 0, 0, 1, 3, 6];   // the son's version, an easy colony: was 2, 5 and 9
 // what makes noise: [strength, radius]; the strength fades by one each tile further out, and every grown tree or flowerbed right by the workshop takes one off
 const NOISE = { quarry:[1, 1], glassworks:[1, 1], smelter:[2, 2], smithy:[3, 3], pump:[1, 1], bioreactor:[1, 1] };
 // the kinds of beauty a house can have around it; three kinds give +1, all five +2
@@ -1088,7 +1092,7 @@ const gGame = c => GUILDS[c].games.includes(guild[c].gm) ? guild[c].gm : GUILDS[
 resetGuilds();
 const gl = c => (guild[c] && guild[c].lv) || 0;
 const guildTotal = () => G_KEYS.reduce((s, c) => s + gl(c), 0);
-const wk = t => { const w = TYPES[t].workers || 0; return w >= 2 && gl('smith') >= 5 ? w - 1 : w; };
+const wk = t => { const w = TYPES[t].workers || 0; return (w >= 2 && gl('smith') >= 5 ? w - 1 : w)*EASY.hands; };   // the son's version: half the hands
 const avail = t => TYPES[t].mp ? mpInv[t] > 0 : unlocked(t);
 const starsTxt = n => '★'.repeat(n) + '☆'.repeat(3 - n);
 function guildMult(t){
@@ -2244,6 +2248,7 @@ function settlerCraft(needs){
 }
 function famMood(i, b, f, Rx, Bx = B){
   const why = [], add = (t, v) => why.push([t, v]), has = t => f.tr.includes(t);
+  add('Любят свою планету', EASY.mood);   // the son's version: an easy colony
   if (b.lvl > Rx.target[i]) add('Дому чего-то не хватает', -15);
   if (has('pious')){ if (Rx.faith[i]) add('Обсерватория рядом', 15); else if (tier >= 2) add('Обсерватории рядом нет', -5); }
   if (has('quiet')) add(Rx.noise[i] ? 'Шумная мастерская рядом' : 'Тихая улица', Rx.noise[i] ? -20 : 5);
@@ -2743,7 +2748,7 @@ function rainTick(){
 }
 // who lets the colony breathe: the dome's own plant, trees under it, tanks and flowerbeds that are working
 function airBalance(pop){
-  const L = new Map(), put = (k, t, v) => { if (v > .01) L.set(k, { t, v }); };
+  const L = new Map(), put = (k, t, v) => { v *= EASY.air; if (v > .01) L.set(k, { t, v }); };   // the son's version: twice the air
   put('dome', 'Купол колонии', AIR_DOME);
   let a = 0, y = 0, na = 0, ny = 0; for (let i = 0; i < N*N; i++) if (tree[i] && !B[i] && inDome(i)){ const n = tnat[i]; if (tree[i] >= GROW) n ? na++ : a++; else if (tree[i] >= GROW/2) n ? ny++ : y++; }
   put('tree', `Земные деревья: ${a}`, a); put('young', `Молодые земные деревья: ${y}`, y/2);
@@ -2784,7 +2789,7 @@ function initLife(){
 // average aliveness of a tile and its eight neighbours; water counts as lush
 function lifeAround(i){ let s = water[i] ? 2.5 : life[i], n = 1; for (const j of nbs(i)){ s += water[j] ? 2.5 : (rock[j] || ice[j]) ? 0 : life[j]; n++; } return s / n; }
 function lifePct(){ let a = 0, n = 0; for (let i = 0; i < N*N; i++){ if (water[i] || rock[i] || ice[i]) continue; n++; if (life[i] >= 2) a++; } return n ? Math.round(100*a/n) : 0; }
-const LIFE_CAP = [.5, 1.2, 2];   // aliveness around a house needed for levels 3, 4 and 5
+const LIFE_CAP = [.3, .9, 1.5];   // aliveness around a house needed for levels 3, 4 and 5 (the son's version, an easy colony: was .5, 1.2 and 2)
 
 /* ---------- fluffies ---------- */
 const passable = j => !water[j] && !rock[j] && !ice[j] && (!B[j] || B[j].t === 'road') && life[j] >= 1;
@@ -3396,7 +3401,7 @@ function tick(){
     share = Math.max(0, Math.min(1, share));
     if (share > 0) for (const r in Rc.in || {}) use += take(r, Rc.in[r]*k*share*(r === 'water' ? drip(t, i) : 1)/60, t, TYPES[t].name);
     for (const r in Rc.out || {}){
-      let a = Rc.out[r]*k*share*cm/60;
+      let a = Rc.out[r]*k*share*cm*EASY.out/60;
       if (t === 'quarry' && has(i, 'yardst')) a *= 1.5;
       if (t === 'bioreactor' && has(i, 'loop')) a *= 1.5;
       if (t === 'vineyard' && has(i, 'berry')) a *= 2;
@@ -3411,7 +3416,7 @@ function tick(){
   for (const i of byType.well || []) run(i, 'well');
   // pumps share the room left in the water store, so with a full store every pump rests a little rather than one pump doing it all
   { const pm = (byType.pump || []).map(i => { const e = effOf(B, i), L = lakeOf(i), k = hands(i, 'pump')*e.eff, g = bm(i, 'pump'), cm = crewM(i)*g;
-      return { i, e, k, g, cm, a: L ? L.y*k*cm/60 : 0 }; });
+      return { i, e, k, g, cm, a: L ? L.y*k*cm*EASY.out/60 : 0 }; });
     const sum = pm.reduce((s, p) => s + p.a, 0), room = Math.max(0, capOf('water') - stock.water), f = sum > room ? room / sum : 1;
     for (const p of pm){
       const v = add('water', p.a*f, 'pump', 'Насос');
@@ -3449,7 +3454,7 @@ function tick(){
   // households eat: algae comes by pipe, greens, bread and berries from a shop nearby.
   // A house that already eats is supplied only if its whole portion is there; one that will eat after growing
   // counts as supplied when the stores have a margin, so a short supply holds back the same few houses steadily.
-  const foodK = gl('bread') >= 3 ? .85 : 1;
+  const foodK = (gl('bread') >= 3 ? .85 : 1)*EASY.eat;
   const eat = (r, i, need, key, lab) => {
     const H = hunger[r];
     if (need > 0){ if (stock[r] + 1e-9 >= need){ stock[r] = Math.max(0, stock[r] - need); H[i] = 0; lnote(r, key, lab, -need); } else { if (H[i] < 255) H[i]++; short[r] = (short[r] || 0) + need; } }
@@ -3460,8 +3465,8 @@ function tick(){
     eat('algae', i, b.lvl >= 2 ? P*EAT.algae*foodK/60 : 0, key, lab);
     if (!R.mk[i]){ for (const r of ['greens','bread','berries']) hunger[r][i] = stock[r] >= 5 ? 0 : PANTRY; continue; }
     eat('greens', i, b.lvl >= 3 ? P*EAT.greens*foodK/60 : 0, key, lab);
-    eat('bread', i, b.lvl === 5 ? P*EAT.bread/60 : 0, key, lab);
-    eat('berries', i, b.lvl === 5 ? P*EAT.berries/60 : 0, key, lab);
+    eat('bread', i, b.lvl === 5 ? P*EAT.bread*EASY.eat/60 : 0, key, lab);
+    eat('berries', i, b.lvl === 5 ? P*EAT.berries*EASY.eat/60 : 0, key, lab);
   }
   growTrees(); growMush();
   air = airBalance(s0.pop);
@@ -7752,7 +7757,7 @@ function renderInfo(){
         + (arrive.ok ? `<p class="ok-t">Челнок с семьёй в пути: сядет примерно через ${timeStr(Math.max(1, SHUTTLE_T - shuttle))}.</p>` : shuttle > 0 ? `<p class="sub">Челнок ждёт на орбите, пока колонии хватит воздуха и воды.</p>` : '');
     } else if (b.t === 'house'){
       const L = LEVELS[b.lvl], tg = R.target[i], f = b.f, gm = f ? moodOf(f.mood).grow : 1;
-      const P = L.pop*(f && f.tr.includes('thrifty') ? .67 : 1), fk = gl('bread') >= 3 ? .85 : 1;
+      const P = L.pop*(f && f.tr.includes('thrifty') ? .67 : 1), fk = (gl('bread') >= 3 ? .85 : 1)*EASY.eat;
       const lbl = (res, name, gate, piped) => { const h = hunger[res][i];
         return tier < gate ? `${name}: откроется позже` : !piped && !R.mk[i] ? `${name}: нужна лавка рядом${walkHint(['market'])}`
           : h >= PANTRY ? `${name}: не хватает` : h > 2 ? `${name}: не хватает, дома запасов на ${timeStr(PANTRY - h)}` : piped ? `${name} по трубам` : `${name} из лавки`; };
@@ -7795,7 +7800,7 @@ function renderInfo(){
         if (b.pet || pw) html += `<h3>Пухляк</h3>` + (b.pet ? (why && isVas(b.pet) && !(b.pg > 0) ? `<p class="warn">Василисе здесь неуютно: ${why}. От Чупровых она не уйдёт, но талант не работает, пока это не поправить.</p>` : why && b.pg > 0 ? `<p class="sub">Пухляк привыкает к новому месту и подождёт ещё ${timeStr(b.pg)}. Сейчас ${why}. Если это поправить, он останется.</p>` : why ? `<p class="warn">Пухляку здесь плохо: ${why}. Если не помочь, через ${timeStr(PET_T - (b.pt || 0))} он уйдёт на луг.</p>` : `<p class="ok-t">В доме живёт пухляк ${b.pet.n}, и ему здесь хорошо: трава, вода и тишина. Семье радостнее, а дети рождаются чаще.</p>`)
           : why ? `<p class="sub">Пухляк здесь пока не поселится: ${why}.</p>` : `<p class="ok-t">Дом подходит пухляку. ${petStatus(i)}</p>`);
         if (b.pet) html += `<p class="sub">Талант: ${talNames(b.pet)} · дружба ${hearts(petLv(b.pet))}</p><div class="acts"><button class="mini" type="button" data-pet="${i}">Пухляк ${b.pet.n}</button></div>`; }
-      const eats = [b.lvl >= 2 ? `${fmt1(P*EAT.algae*fk)} водорослей` : '', b.lvl >= 3 ? `${fmt1(P*EAT.greens*fk)} зелени` : '', b.lvl === 5 ? `${fmt1(P*EAT.bread)} хлеба, ${fmt1(P*EAT.berries)} ягод` : ''].filter(Boolean).join(', ');
+      const eats = [b.lvl >= 2 ? `${fmt1(P*EAT.algae*fk)} водорослей` : '', b.lvl >= 3 ? `${fmt1(P*EAT.greens*fk)} зелени` : '', b.lvl === 5 ? `${fmt1(P*EAT.bread*EASY.eat)} хлеба, ${fmt1(P*EAT.berries*EASY.eat)} ягод` : ''].filter(Boolean).join(', ');
       html += `<h3>Дом за минуту</h3><div class="kv"><span>Пьют</span><span>${fmt1(P*DRINK[b.lvl])} воды</span></div>
         <div class="kv"><span>Едят</span><span>${eats || 'запасы из капсулы'}</span></div>
         <div class="kv"><span>Дышат</span><span>${L.pop} ${plural(L.pop,'житель','жителя','жителей')}</span></div>
@@ -7829,7 +7834,7 @@ function renderInfo(){
         : `<p class="warn">Воды не хватает: работает на ${Math.round(inf.share*100)}%.${ex(' Вода раздаётся по очереди: сначала людям, потом еде, потом мастерским и цветам.')}</p>`;
       if ((b.t === 'garden' || b.t === 'fountain') && dry[i] >= DRY_T) html += `<p class="warn">${b.t === 'garden' ? 'Клумба вянет без воды: не даёт воздуха, не оживляет землю и украшает вдвое слабее.' : 'Пруд обмелел: дома не берут из него воду, и он украшает вдвое слабее.'}</p>`;
       const star = R.star.get(i);
-      if (Ty.workers) html += `<div class="kv"><span>Работники</span><span>${star && star.m.fm === 'steward' ? 'не нужны: есть управляющий' : wk(b.t) + (work.ratio < .999 ? ` · есть ${Math.round(work.ratio*100)}%` : '')}</span></div>`;
+      if (Ty.workers) html += `<div class="kv"><span>Работники</span><span>${star && star.m.fm === 'steward' ? 'не нужны: есть управляющий' : fmt1(wk(b.t)) + (work.ratio < .999 ? ` · есть ${Math.round(work.ratio*100)}%` : '')}</span></div>`;
       if (inf && inf.use !== undefined){
         const inR = Rc && Rc.in ? Object.keys(Rc.in)[0] : null, outR = Rc && Rc.out ? Object.keys(Rc.out)[0] : b.t === 'pump' ? 'water' : null;
         if (b.t === 'recycler') html += `<div class="kv"><span>Возвращает в минуту</span><span>${fmt1(inf.out)} из ${fmt1(inf.use)} выпитой воды</span></div>`;
@@ -7880,19 +7885,19 @@ function renderInfo(){
     if (!toolMore){   // the short card: what it costs and gives, and a way to the whole card; the map stays in sight
       const Rc = RECIPE[tool], bits = [];
       if (Rc){ const a = Rc.in && Object.keys(Rc.in)[0], o = Rc.out && Object.keys(Rc.out)[0];
-        if (o) bits.push(`даёт ${fmt1(Rc.out[o])} ${RES[o].gen} в минуту`); if (a) bits.push(`берёт ${fmt1(Rc.in[a])} ${RES[a].gen}`); }
-      if (Ty.workers) bits.push(`работники: ${wk(tool)}`);
+        if (o) bits.push(`даёт ${fmt1(Rc.out[o]*EASY.out)} ${RES[o].gen} в минуту`); if (a) bits.push(`берёт ${fmt1(Rc.in[a])} ${RES[a].gen}`); }
+      if (Ty.workers) bits.push(`работники: ${fmt1(wk(tool))}`);
       if (bits.length) html += `<p class="sub">${ucf(bits.join(' · '))}</p>`;
       if (tool === 'paving' && !lock) html += mzMenu();
       html += `<button class="more" type="button" data-more>Подробнее</button>`;
     } else {
     html += `<p style="margin-top:10px">${Ty.desc}</p>`;
     if (tool === 'paving' && !lock) html += mzMenu();
-    if (Ty.workers) html += `<div class="kv"><span>Работники</span><span>${wk(tool)}</span></div>`;
+    if (Ty.workers) html += `<div class="kv"><span>Работники</span><span>${fmt1(wk(tool))}</span></div>`;
     if (BUILD_T[tool]) html += `<div class="kv"><span>Стройка</span><span>${timeStr(BUILD_T[tool])} одной бригадой</span></div>`;
     { const Rc = RECIPE[tool]; if (Rc){ const a = Rc.in && Object.keys(Rc.in)[0], o = Rc.out && Object.keys(Rc.out)[0];
       if (a) html += `<div class="kv"><span>Берёт в минуту</span><span>${fmt1(Rc.in[a])} ${RES[a].gen}</span></div>`;
-      if (o) html += `<div class="kv"><span>Даёт в минуту</span><span>${fmt1(Rc.out[o])} ${RES[o].gen}</span></div>`;
+      if (o) html += `<div class="kv"><span>Даёт в минуту</span><span>${fmt1(Rc.out[o]*EASY.out)} ${RES[o].gen}</span></div>`;
       if (Rc.air) html += `<div class="kv"><span>Воздух</span><span>хватает на ${Rc.air} ${plural(Rc.air,'жителя','жителей','жителей')}</span></div>`; } }
     if (CRAFT_OF[tool] === 'geo') html += `<p class="sub" style="margin-top:10px">Ремесло: геологи. Семьи геологов не дальше ${JOB_R} клеток спускаются в шахту, до двух семей. Когда шахта будет готова, следующий шаттл привезёт геологов на свободный участок не дальше ${JOB_R} клеток от неё.</p>`;
     else if (CRAFT_OF[tool]){ const C = CRAFTS[CRAFT_OF[tool]]; html += `<p class="sub" style="margin-top:10px">Ремесло: ${C.pl}. Каждая семья ${C.gpl} не дальше ${JOB_R} клеток: ${crewBonus(tool, 1)}, до двух семей.${tool === 'temple' ? ` Если астрономов рядом нет, за телескоп возьмётся семья без работы из дома не дальше ${JOB_R} клеток, а если нет и такой, шаттл привезёт астрономов на свободный участок рядом.` : tool === 'shaft' ? ` Шахту ставят только вплотную к кратеру: кратеры открываются, когда купол расширяется. Если геологов рядом нет, за спуски возьмётся семья без работы, а если нет и такой, шаттл привезёт геологов.` : ''}</p>`; }
